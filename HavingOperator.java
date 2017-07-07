@@ -84,12 +84,12 @@ public class HavingOperator {
                 columnExpression = ((Function) leftExpression).getParameters().getExpressions().get(0);
                 if(columnExpression instanceof Column){
                     Column column = (Column)columnExpression;
-                    if(column.getTable().getName() != null) {
-                        if(aliasHashMap.containsKey(column.getTable().getName())) {
-                            tableName = aliasHashMap.get(column.getTable().getName());
+                    if(column.getTable().getName().toLowerCase() != null) {
+                        if(aliasHashMap.containsKey(column.getTable().getName().toLowerCase())) {
+                            tableName = aliasHashMap.get(column.getTable().getName().toLowerCase());
                             for(int i = 0; i < schema.length; i++) {
-                                if(schema[i].getTable().getName().equals(tableName)) {
-                                    if(schema[i].getColumnName().equals(column.getColumnName())) {
+                                if(schema[i].getTable().getName().toLowerCase().equals(tableName)) {
+                                    if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                                         columnIndex = i;
                                         break;
                                     }
@@ -102,7 +102,7 @@ public class HavingOperator {
                     }
                     else {
                         for(int i = 0; i < schema.length; i++) {
-                            if(schema[i].getColumnName().equals(column.getColumnName())) {
+                            if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                                 columnIndex = i;
                                 break;
                             }

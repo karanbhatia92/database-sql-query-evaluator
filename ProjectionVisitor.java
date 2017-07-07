@@ -30,12 +30,12 @@ public class ProjectionVisitor implements SelectItemVisitor {
 
     public void visit(AllTableColumns allTableColumns) {
 
-        String aliasName = allTableColumns.getTable().getWholeTableName();
+        String aliasName = allTableColumns.getTable().getWholeTableName().toLowerCase();
         String tableName;
         if(aliasHashMap.containsKey(aliasName)){
             tableName = aliasHashMap.get(aliasName);
             for(int i = 0; i < schema.length; i++){
-                if(schema[i].getTable().getWholeTableName().equals(tableName)){
+                if(schema[i].getTable().getWholeTableName().toLowerCase().equals(tableName)){
                     columnIndexes.add(i);
                 }
             }
@@ -49,10 +49,10 @@ public class ProjectionVisitor implements SelectItemVisitor {
         if(expression instanceof Column) {
             Column column = (Column)expression;
             if(column.getTable().getName() != null) {
-                if(aliasHashMap.containsKey(column.getTable().getName())) {
-                    tableName = aliasHashMap.get(column.getTable().getName());
+                if(aliasHashMap.containsKey(column.getTable().getName().toLowerCase())) {
+                    tableName = aliasHashMap.get(column.getTable().getName().toLowerCase());
                     for(int i = 0; i < schema.length; i++) {
-                        if(schema[i].getTable().getName().equals(tableName)) {
+                        if(schema[i].getTable().getName().toLowerCase().equals(tableName)) {
                             if(schema[i].getColumnName().equals(column.getColumnName())) {
                                 columnIndexes.add(i);
                                 break;

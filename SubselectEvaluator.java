@@ -40,13 +40,13 @@ public class SubselectEvaluator implements Operator {
         ArrayList<ColumnDefinition> columnDefinitions = new ArrayList<>();
         for(int i = 0; i < tempSchema.length; i++){
 
-            String tableName = tempSchema[i].getTable().getWholeTableName();
+            String tableName = tempSchema[i].getTable().getWholeTableName().toLowerCase();
             CreateTable createTable = createTableMap.get(tableName);
             ArrayList<ColumnDefinition> tempColumnDefinition = (ArrayList<ColumnDefinition>) createTable.getColumnDefinitions();
             for(int j = 0; j < tempColumnDefinition.size(); j++){
 
-                String columnName = tempColumnDefinition.get(j).getColumnName();
-                if(columnName.equals(tempSchema[i].getColumnName())){
+                String columnName = tempColumnDefinition.get(j).getColumnName().toLowerCase();
+                if(columnName.equals(tempSchema[i].getColumnName().toLowerCase())){
                     if(!(columnList.contains(columnName))){
                         columnList.add(columnName);
                         columnDefinitions.add(tempColumnDefinition.get(j));
@@ -58,7 +58,7 @@ public class SubselectEvaluator implements Operator {
         CreateTable createTable = new CreateTable();
         createTable.setTable(table);
         createTable.setColumnDefinitions(columnDefinitions);
-        createTableMap.put(createTable.getTable().getWholeTableName(),createTable);
+        createTableMap.put(createTable.getTable().getWholeTableName().toLowerCase(),createTable);
 
         for(int i = 0; i < schemaList.size(); i++){
             schemaList.get(i).setTable(table);

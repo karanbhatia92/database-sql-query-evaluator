@@ -81,7 +81,7 @@ public class Main {
                                         if(tempSchema == null && tempSchema2 != null){
                                             tempSchema = tempSchema2;
                                             for(int j = 0; j < tempSchema.length; j++) {
-                                                schemaIndex.put(tempSchema[j].getWholeColumnName(), j);
+                                                schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
                                             }
                                             for (int j = 0; j < plainSelectResult2.size(); j++) {
                                                 String key = "";
@@ -97,7 +97,7 @@ public class Main {
 
                                         }else if(tempSchema != null && tempSchema2 == null) {
                                             for(int j = 0; j < tempSchema.length; j++) {
-                                                schemaIndex.put(tempSchema[j].getWholeColumnName(), j);
+                                                schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
                                             }
                                             for (int j = 0; j < plainSelectResult1.size(); j++) {
                                                 String key = "";
@@ -113,7 +113,7 @@ public class Main {
                                         }else if(tempSchema != null && tempSchema2 != null){
                                             assert tempSchema.length==tempSchema2.length : "Union: schema1 length does not match schema2 length";
                                             for(int j = 0; j < tempSchema.length; j++) {
-                                                schemaIndex.put(tempSchema[j].getWholeColumnName(), j);
+                                                schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
                                             }
                                             for (int j = 0; j < plainSelectResult1.size(); j++) {
                                                 String key = "";
@@ -128,7 +128,7 @@ public class Main {
                                             }
                                             ArrayList<Integer> indexOrder = new ArrayList<Integer>();
                                             for(int j = 0; j < tempSchema2.length; j++) {
-                                                indexOrder.add(schemaIndex.get(tempSchema2[j].getWholeColumnName()));
+                                                indexOrder.add(schemaIndex.get(tempSchema2[j].getWholeColumnName().toLowerCase()));
                                             }
 
                                             for(int j = 0 ; j < plainSelectResult2.size(); j++) {
@@ -155,7 +155,7 @@ public class Main {
                                             tempSchema = tempSchema2;
                                             if(schemaIndex.isEmpty()){
                                                 for(int j = 0; j < tempSchema.length; j++) {
-                                                    schemaIndex.put(tempSchema[j].getWholeColumnName(), j);
+                                                    schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
                                                 }
                                             }
                                             for (int j = 0; j < plainSelectResult2.size(); j++) {
@@ -173,7 +173,7 @@ public class Main {
                                             assert tempSchema.length==tempSchema2.length : "Union: schema1 length does not match schema2 length";
                                             ArrayList<Integer> indexOrder = new ArrayList<Integer>();
                                             for(int j = 0; j < tempSchema2.length; j++) {
-                                                indexOrder.add(schemaIndex.get(tempSchema2[j].getWholeColumnName()));
+                                                indexOrder.add(schemaIndex.get(tempSchema2[j].getWholeColumnName().toLowerCase()));
                                             }
 
                                             for(int j = 0 ; j < plainSelectResult2.size(); j++) {

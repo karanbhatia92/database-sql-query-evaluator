@@ -95,13 +95,13 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
             assert tuple.length==schema.length : "Tuple length does not match schema length";
             currentSchemaIndex = new HashMap<>();
             for(int i = 0; i < currentSchema.length; i++) {
-                currentSchemaIndex.put(currentSchema[i].getWholeColumnName(), i);
+                currentSchemaIndex.put(currentSchema[i].getWholeColumnName().toLowerCase(), i);
             }
 
             finalTuple = new PrimitiveValue[tuple.length];
             for(int i = 0; i < tuple.length; i++) {
                 Column col = schema[i];
-                int index = currentSchemaIndex.get(col.getWholeColumnName());
+                int index = currentSchemaIndex.get(col.getWholeColumnName().toLowerCase());
                 finalTuple[i] = tuple[index];
             }
             return finalTuple;
@@ -147,20 +147,20 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                         if (sortedExpList.isEmpty()) {
                             if (leftExpr instanceof Column && rightExpr instanceof Column) {
                                 sortedExpList.add(exp);
-                                tableHashSet.add(((Column) leftExpr).getTable().getWholeTableName());
-                                tableHashSet.add(((Column) rightExpr).getTable().getWholeTableName());
+                                tableHashSet.add(((Column) leftExpr).getTable().getWholeTableName().toLowerCase());
+                                tableHashSet.add(((Column) rightExpr).getTable().getWholeTableName().toLowerCase());
                                 joinCount--;
                                 iterator.remove();
                             }
                         } else {
                             if (leftExpr instanceof Column && rightExpr instanceof Column) {
-                                String leftTable = ((Column) leftExpr).getTable().getWholeTableName();
-                                String rightTable = ((Column) rightExpr).getTable().getWholeTableName();
+                                String leftTable = ((Column) leftExpr).getTable().getWholeTableName().toLowerCase();
+                                String rightTable = ((Column) rightExpr).getTable().getWholeTableName().toLowerCase();
                                 if(tableHashSet.contains(leftTable)
                                         || tableHashSet.contains(rightTable)) {
                                     sortedExpList.add(exp);
-                                    tableHashSet.add(((Column) leftExpr).getTable().getWholeTableName());
-                                    tableHashSet.add(((Column) rightExpr).getTable().getWholeTableName());
+                                    tableHashSet.add(((Column) leftExpr).getTable().getWholeTableName().toLowerCase());
+                                    tableHashSet.add(((Column) rightExpr).getTable().getWholeTableName().toLowerCase());
                                     joinCount--;
                                     iterator.remove();
                                 }
@@ -284,8 +284,8 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
             Column col1 = (Column)leftExpression;
             Column col2 = (Column)rightExpression;
 
-            String tableName1 = col1.getTable().getWholeTableName();
-            String tableName2 = col2.getTable().getWholeTableName();
+            String tableName1 = col1.getTable().getWholeTableName().toLowerCase();
+            String tableName2 = col2.getTable().getWholeTableName().toLowerCase();
 
             tableName1 = aliasHashMap.get(tableName1);
             tableName2 = aliasHashMap.get(tableName2);
@@ -311,12 +311,12 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     for(int i = 0; i < cols1.size(); i++) {
                         ColumnDefinition col = (ColumnDefinition)cols1.get(i);
                         currentSchema[i] = new Column(new Table(null, tableName1),
-                                col.getColumnName());
+                                col.getColumnName().toLowerCase());
                     }
                     for(int i = cols1.size(); i < cols1.size() + cols2.size(); i++) {
                         ColumnDefinition col = (ColumnDefinition)cols2.get(i - cols1.size());
                         currentSchema[i] = new Column(new Table(null, tableName2),
-                                col.getColumnName());
+                                col.getColumnName().toLowerCase());
                     }
                     while ((rightTuple = oper2.readOneTuple()) != null) {
                         jointTuple = new PrimitiveValue[leftTuple.length + rightTuple.length];
@@ -386,7 +386,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     for(int j = lastJoinSchema.length; j < lastJoinSchema.length + cols2.size(); j++) {
                         ColumnDefinition col = (ColumnDefinition)cols2.get(j - lastJoinSchema.length);
                         currentSchema[j] = new Column(new Table(null, newTableName),
-                                col.getColumnName());
+                                col.getColumnName().toLowerCase());
                     }
                     while ((rightTuple = newOperator.readOneTuple()) != null) {
                         jointTuple = new PrimitiveValue[leftTuple.length + rightTuple.length];
@@ -428,16 +428,18 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                 col1 = (Column)rightExpression;
             }
 
-            String tableName = col1.getTable().getWholeTableName();
+            String tableName = col1.getTable().getWholeTableName().toLowerCase();
             tableName = aliasHashMap.get(tableName);
+/*
             if(tableName == null) {
                 for(int i = 0; i < currentSchema.length; i++) {
-                    if(col1.getColumnName().equals(currentSchema[i].getColumnName())) {
-                        tableName = currentSchema[i].getTable().getWholeTableName();
+                    if(col1.getColumnName().toLowerCase().equals(currentSchema[i].getColumnName().toLowerCase())) {
+                        tableName = currentSchema[i].getTable().getWholeTableName().toLowerCase();
                         break;
                     }
                 }
             }
+*/
             smallJoin = bigJoin;
             bigJoin = new ArrayList<>();
 
@@ -463,10 +465,80 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         }
     }
     public void visit(GreaterThan greaterThan) {
-        System.out.println("InsideGreaterThanExpression");
+
+        Expression leftExpression = greaterThan.getLeftExpression();
+        Expression rightExpression = greaterThan.getLeftExpression();
+
+        Column col1;
+        if(leftExpression instanceof Column) {
+            col1 = (Column)leftExpression;
+        } else {
+            col1 = (Column)rightExpression;
+        }
+
+        String tableName = col1.getTable().getWholeTableName().toLowerCase();
+
+        tableName = aliasHashMap.get(tableName);
+
+        smallJoin = bigJoin;
+        bigJoin = new ArrayList<>();
+
+        if(joinedTablesList.contains(tableName)) {
+
+            for (int i = 0; i < smallJoin.size(); i++) {
+                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+
+                try {
+                    PrimitiveValue result = evaluator.eval(greaterThan);
+                    BooleanValue boolResult = (BooleanValue)result;
+                    if(boolResult.getValue()) {
+                        bigJoin.add(smallJoin.get(i));
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            System.out.println("PANIC GreaterThan Expression: Table not found in  JoinedTableList");
+        }
     }
     public void visit(GreaterThanEquals greaterThanEquals) {
-        System.out.println("InsideGreaterThanEqualsExpression");
+
+        Expression leftExpression = greaterThanEquals.getLeftExpression();
+        Expression rightExpression = greaterThanEquals.getLeftExpression();
+
+        Column col1;
+        if(leftExpression instanceof Column) {
+            col1 = (Column)leftExpression;
+        } else {
+            col1 = (Column)rightExpression;
+        }
+
+        String tableName = col1.getTable().getWholeTableName().toLowerCase();
+
+        tableName = aliasHashMap.get(tableName);
+
+        smallJoin = bigJoin;
+        bigJoin = new ArrayList<>();
+
+        if(joinedTablesList.contains(tableName)) {
+
+            for (int i = 0; i < smallJoin.size(); i++) {
+                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+
+                try {
+                    PrimitiveValue result = evaluator.eval(greaterThanEquals);
+                    BooleanValue boolResult = (BooleanValue)result;
+                    if(boolResult.getValue()) {
+                        bigJoin.add(smallJoin.get(i));
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            System.out.println("PANIC GreaterThanEquals Expression: Table not found in  JoinedTableList");
+        }
     }
     public void visit(InExpression inExpression)
     {
@@ -502,18 +574,18 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
 
 
         Column col = (Column)leftExpression;
-        String colName = col.getWholeColumnName();
+        String colName = col.getWholeColumnName().toLowerCase();
         int myIndex = 0;
         int index = 0;
         for (int i = 0; i < currentSchema.length; i++) {
-            if(colName.equals(currentSchema[i].getWholeColumnName())) {
+            if(colName.equals(currentSchema[i].getWholeColumnName().toLowerCase())) {
                 myIndex = i;
                 break;
             }
         }
 
         for (int i = 0; i < schema.length; i++) {
-            if(colName.equals(schema[i].getWholeColumnName())) {
+            if(colName.equals(schema[i].getWholeColumnName().toLowerCase())) {
                 index = i;
                 break;
             }
@@ -539,7 +611,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
 
 		Column col1 = (Column)leftExpression;
 
-		String tableName = col1.getTable().getWholeTableName();
+		String tableName = col1.getTable().getWholeTableName().toLowerCase();
 
 		tableName = aliasHashMap.get(tableName);
 
@@ -566,13 +638,119 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         }
     }
     public void visit(MinorThan minorThan) {
-        System.out.println("InsideMinorThanExpression");
+
+        Expression leftExpression = minorThan.getLeftExpression();
+        Expression rightExpression = minorThan.getLeftExpression();
+
+        Column col1;
+        if(leftExpression instanceof Column) {
+            col1 = (Column)leftExpression;
+        } else {
+            col1 = (Column)rightExpression;
+        }
+
+        String tableName = col1.getTable().getWholeTableName().toLowerCase();
+
+        tableName = aliasHashMap.get(tableName);
+
+        smallJoin = bigJoin;
+        bigJoin = new ArrayList<>();
+
+        if(joinedTablesList.contains(tableName)) {
+
+            for (int i = 0; i < smallJoin.size(); i++) {
+                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+
+                try {
+                    PrimitiveValue result = evaluator.eval(minorThan);
+                    BooleanValue boolResult = (BooleanValue)result;
+                    if(boolResult.getValue()) {
+                        bigJoin.add(smallJoin.get(i));
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            System.out.println("PANIC MinorThan Expression: Table not found in  JoinedTableList");
+        }
     }
-    public void visit(MinorThanEquals minorThanEquals) {
-        System.out.println("InsideMinorThanEqualsExpression");
+    public void visit(MinorThanEquals minorThanEquals)
+    {
+
+        Expression leftExpression = minorThanEquals.getLeftExpression();
+        Expression rightExpression = minorThanEquals.getLeftExpression();
+
+        Column col1;
+        if(leftExpression instanceof Column) {
+            col1 = (Column)leftExpression;
+        } else {
+            col1 = (Column)rightExpression;
+        }
+
+        String tableName = col1.getTable().getWholeTableName().toLowerCase();
+
+        tableName = aliasHashMap.get(tableName);
+
+        smallJoin = bigJoin;
+        bigJoin = new ArrayList<>();
+
+        if(joinedTablesList.contains(tableName)) {
+
+            for (int i = 0; i < smallJoin.size(); i++) {
+                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+
+                try {
+                    PrimitiveValue result = evaluator.eval(minorThanEquals);
+                    BooleanValue boolResult = (BooleanValue)result;
+                    if(boolResult.getValue()) {
+                        bigJoin.add(smallJoin.get(i));
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            System.out.println("PANIC MinorThanEquals Expression: Table not found in  JoinedTableList");
+        }
     }
     public void visit(NotEqualsTo notEqualsTo) {
-        System.out.println("InsideNotEqualsToExpression");
+
+        Expression leftExpression = notEqualsTo.getLeftExpression();
+        Expression rightExpression = notEqualsTo.getLeftExpression();
+
+        Column col1;
+        if(leftExpression instanceof Column) {
+            col1 = (Column)leftExpression;
+        } else {
+            col1 = (Column)rightExpression;
+        }
+
+        String tableName = col1.getTable().getWholeTableName().toLowerCase();
+
+        tableName = aliasHashMap.get(tableName);
+
+        smallJoin = bigJoin;
+        bigJoin = new ArrayList<>();
+
+        if(joinedTablesList.contains(tableName)) {
+
+            for (int i = 0; i < smallJoin.size(); i++) {
+                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+
+                try {
+                    PrimitiveValue result = evaluator.eval(notEqualsTo);
+                    BooleanValue boolResult = (BooleanValue)result;
+                    if(boolResult.getValue()) {
+                        bigJoin.add(smallJoin.get(i));
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            System.out.println("PANIC NotEqualsTo Expression: Table not found in  JoinedTableList");
+        }
     }
     public void visit(Column tableColumn) {
         System.out.println("InsideTableColumnExpression");

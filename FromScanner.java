@@ -61,9 +61,9 @@ public class FromScanner implements FromItemVisitor {
     }
 
     public void visit(Table table) {
-        CreateTable ct = createTableMap.get(table.getName());
+        CreateTable ct = createTableMap.get(table.getName().toLowerCase());
         if(table.getAlias() != null) {
-            aliasHasMap.put(table.getAlias(), table.getName());
+            aliasHasMap.put(table.getAlias().toLowerCase(), table.getName().toLowerCase());
         }
         List cols = ct.getColumnDefinitions();
 
@@ -72,7 +72,7 @@ public class FromScanner implements FromItemVisitor {
             schemaList.add(new Column(table, col.getColumnName().toLowerCase()));
         }
         source = new ScanOperator(
-                new File(table.getName() + ".csv"), ct);
-        operatorMap.put(table.getName(), source);
+                new File(table.getName().toLowerCase() + ".csv"), ct);
+        operatorMap.put(table.getName().toLowerCase(), source);
     }
 }

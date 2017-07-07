@@ -52,14 +52,14 @@ public class OrderByOperator {
         if(orderByExp instanceof Column) {
             projectionFlag = true;
             Column column = (Column)orderByExp;
-            orderByColumnName = column.getColumnName();
+            orderByColumnName = column.getColumnName().toLowerCase();
             if(column.getTable().getName() != null) {
-                aliasName = column.getTable().getName();
+                aliasName = column.getTable().getName().toLowerCase();
                 if(aliasHashMap.containsKey(aliasName)){
                     tableName = aliasHashMap.get(aliasName);
                     for(int i = 0; i < schema.length; i++) {
-                        if(schema[i].getTable().getName().equals(tableName)) {
-                            if(schema[i].getColumnName().equals(column.getColumnName())) {
+                        if(schema[i].getTable().getName().toLowerCase().equals(tableName)) {
+                            if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                                 columnIndexOrder = i;
                                 break;
                             }
@@ -71,7 +71,7 @@ public class OrderByOperator {
                 }
             } else {
                 for(int i = 0; i < schema.length; i++) {
-                    if(schema[i].getColumnName().equals(column.getColumnName())) {
+                    if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                         columnIndexOrder = i;
                         break;
                     }
@@ -116,7 +116,7 @@ public class OrderByOperator {
             }
 
             if(plainSelect.getGroupByColumnReferences()!=null){
-                groupByColumnName = plainSelect.getGroupByColumnReferences().get(0).getColumnName();
+                groupByColumnName = plainSelect.getGroupByColumnReferences().get(0).getColumnName().toLowerCase();
                 if(groupByColumnName.equals(orderByColumnName)){
                     while(itr.hasNext()){
                         PrimitiveValue key = (PrimitiveValue) itr.next();

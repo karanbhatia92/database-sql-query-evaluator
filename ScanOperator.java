@@ -63,6 +63,9 @@ public class ScanOperator implements Operator {
                 case "DATE":
                     ret[i] = new DateValue(cols[i]);
                     break;
+                case "DOUBLE":
+                    ret[i] = new DoubleValue(cols[i]);
+                    break;
                 default:
                     ret[i] = null;
             }

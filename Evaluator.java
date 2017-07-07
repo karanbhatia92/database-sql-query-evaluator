@@ -28,20 +28,22 @@ public class Evaluator extends Eval {
     }
 
     public PrimitiveValue eval(Column c) throws SQLException {
-        String colName = c.getColumnName();
+        String colName = c.getColumnName().toLowerCase();
         String tableName = c.getTable().getName();
         int index = -1;
         if(tableName == null) {
             for(int i = 0; i < schema.length; i++) {
-                if(schema[i].getColumnName().equals(colName)) {
+                if(schema[i].getColumnName().toLowerCase().equals(colName)) {
                     index = i;
+                    break;
                 }
             }
         } else {
+            tableName = tableName.toLowerCase();
             String fullTableName = aliasHashMap.get(tableName);
             for(int i = 0; i < schema.length; i++) {
-                if(schema[i].getColumnName().equals(c.getColumnName())) {
-                    if(schema[i].getTable().getName().equals(fullTableName)) {
+                if(schema[i].getColumnName().toLowerCase().equals(c.getColumnName().toLowerCase())) {
+                    if(schema[i].getTable().getName().toLowerCase().equals(fullTableName)) {
                         index = i;
                     }
                 }

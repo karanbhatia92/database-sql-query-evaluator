@@ -24,11 +24,11 @@ public class GroupByOperator {
 
         Column groupByColumn = groupByColumns.get(0);
         if(groupByColumn.getTable().getName()!=null) {
-            aliasName = groupByColumn.getTable().getName();
+            aliasName = groupByColumn.getTable().getName().toLowerCase();
             tableName = aliasHashMap.get(aliasName);
             for(int i = 0; i<schema.length; i++){
-                if(schema[i].getTable().getName().equals(tableName)) {
-                    if(schema[i].getColumnName().equals(groupByColumn.getColumnName())) {
+                if(schema[i].getTable().getName().toLowerCase().equals(tableName)) {
+                    if(schema[i].getColumnName().toLowerCase().equals(groupByColumn.getColumnName().toLowerCase())) {
                         columnIndex = i;
                         break;
                     }
@@ -37,7 +37,7 @@ public class GroupByOperator {
         }
         else{
             for(int i = 0; i<schema.length; i++){
-                if(schema[i].getColumnName().equals(groupByColumn.getColumnName())){
+                if(schema[i].getColumnName().toLowerCase().equals(groupByColumn.getColumnName().toLowerCase())){
                     columnIndex = i;
                     break;
                 }
