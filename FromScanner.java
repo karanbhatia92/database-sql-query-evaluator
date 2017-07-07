@@ -34,12 +34,12 @@ public class FromScanner implements FromItemVisitor {
         String alias = "";
         Column[] tempSchema;
         if(subSelect.getAlias()!=null){
-            alias = subSelect.getAlias();
-            aliasHasMap.put(alias,"fromTable");
+            alias = subSelect.getAlias().toLowerCase();
+            aliasHasMap.put(alias,"fromtable");
         }
         else {
             System.out.println("WARNING: FromScanner SubSelect: alias added as FT");
-            alias = "FT";
+            alias = "ft";
         }
         SelectBody selectBody = subSelect.getSelectBody();
         if(selectBody instanceof PlainSelect){
@@ -53,7 +53,7 @@ public class FromScanner implements FromItemVisitor {
                 schemaList.add(tempSchema[i]);
             }
             this.createTableMap = subselectEvaluator.createTableMap;
-            operatorMap.put("fromTable",subselectEvaluator);
+            operatorMap.put("fromtable",subselectEvaluator);
         }
         else{
             System.out.println("ERROR: FromScanner : Union not handled in subSelect");

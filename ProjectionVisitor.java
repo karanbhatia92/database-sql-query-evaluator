@@ -53,7 +53,7 @@ public class ProjectionVisitor implements SelectItemVisitor {
                     tableName = aliasHashMap.get(column.getTable().getName().toLowerCase());
                     for(int i = 0; i < schema.length; i++) {
                         if(schema[i].getTable().getName().toLowerCase().equals(tableName)) {
-                            if(schema[i].getColumnName().equals(column.getColumnName())) {
+                            if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                                 columnIndexes.add(i);
                                 break;
                             }
@@ -64,7 +64,7 @@ public class ProjectionVisitor implements SelectItemVisitor {
                 }
             } else {
                 for(int i = 0; i < schema.length; i++) {
-                    if(schema[i].getColumnName().equals(column.getColumnName())) {
+                    if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                         columnIndexes.add(i);
                         break;
                     }

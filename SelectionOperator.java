@@ -427,8 +427,13 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
             } else {
                 col1 = (Column)rightExpression;
             }
+            String tableName = null;
+            try {
+                tableName = col1.getTable().getWholeTableName().toLowerCase();
+            } catch (NullPointerException e) {
+                e.printStackTrace();
+            }
 
-            String tableName = col1.getTable().getWholeTableName().toLowerCase();
             tableName = aliasHashMap.get(tableName);
 /*
             if(tableName == null) {
