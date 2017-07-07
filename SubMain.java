@@ -1,5 +1,8 @@
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.PrimitiveValue;
+import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
@@ -31,7 +34,6 @@ public class SubMain {
         HashMap<String, Operator> operatorMap;
         List<Join> joinList;
         Operator oper = null;
-
         FromScanner fromscan = new FromScanner(createTableMap);
         plainSelect.getFromItem().accept(fromscan);
 
@@ -95,6 +97,7 @@ public class SubMain {
             groupByMap = havingOperator.getMap();
         }
 
+        Boolean projectionFlag = true;
         //Order By
         if(plainSelect.getOrderByElements()!=null){
             List<OrderByElement> orderByList = plainSelect.getOrderByElements();
@@ -103,12 +106,15 @@ public class SubMain {
             );
             orderByOperator.orderTuples(orderByList);
             outputTupleList = orderByOperator.getOrderByOutput();
+            projectionFlag = orderByOperator.projectionFlag;
             groupByMap = orderByOperator.groupByMap;
         }
 
+        //Projection
         List<SelectItem> selectItemList = plainSelect.getSelectItems();
         ProjectionOperator projectionOperator = new ProjectionOperator(
-                outputTupleList, selectItemList, schema, aliasHashMap
+                outputTupleList, selectItemList, schema, aliasHashMap,
+                projectionFlag, plainSelect, groupByMap
         );
         outputTupleList = projectionOperator.getProjectedOutput();
         newSchema = projectionOperator.newSchema;
@@ -118,7 +124,10 @@ public class SubMain {
             outputTupleList = distinctOperator.execute();
         }
 
+        if(plainSelect.getLimit()!=null){
+            long limit = plainSelect.getLimit().getRowCount();
 
+        }
         return outputTupleList;
     }
 }

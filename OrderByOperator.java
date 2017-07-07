@@ -50,10 +50,10 @@ public class OrderByOperator {
         Expression orderByExp = orderByList.get(0).getExpression();
 
         if(orderByExp instanceof Column) {
-            projectionFlag = true;
             Column column = (Column)orderByExp;
             orderByColumnName = column.getColumnName().toLowerCase();
             if(column.getTable().getName() != null) {
+                projectionFlag = true;
                 aliasName = column.getTable().getName().toLowerCase();
                 if(aliasHashMap.containsKey(aliasName)){
                     tableName = aliasHashMap.get(aliasName);
@@ -73,34 +73,18 @@ public class OrderByOperator {
                 for(int i = 0; i < schema.length; i++) {
                     if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                         columnIndexOrder = i;
+                        projectionFlag = true;
                         break;
                     }
                 }
 
             }
-        }
-        else if(orderByExp instanceof StringValue){
-            String orderExpName = ((StringValue) orderByExp).getNotExcapedValue();
-            String projectionAliasName = "";
-            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>) plainSelect.getSelectItems();
-            for(SelectItem selectItem : selectItems) {
-                if (selectItem instanceof SelectExpressionItem) {
-                    Expression expression = ((SelectExpressionItem) selectItem).getExpression();
-                    if (expression instanceof Function) {
-                        Function function = (Function) expression;
-                        if(((SelectExpressionItem) selectItem).getAlias()!=null){
-                            projectionAliasName = ((SelectExpressionItem) selectItem).getAlias();
-                        }
-                        if(orderExpName.equals(projectionAliasName)){
-                            // order evaluatior class returns final arraylist and group by map
-                            OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap,
-                                                aliasHashMap, schema, outputTupleList, isAsc);
-                            orderByList = orderEvaluator.execute();
-                        }
-                    }
-                }
+            if(!projectionFlag){
+                // get the alias and return it
+                // send is asc
             }
         }
+
         else{
             System.out.println("ERROR in OrderByOperator: Expression not handled");
         }
@@ -171,7 +155,7 @@ public class OrderByOperator {
             }
         }
 
-        return orderByOutput;
+        return outputTupleList;
     }
 
 

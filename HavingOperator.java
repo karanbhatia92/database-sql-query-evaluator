@@ -34,7 +34,7 @@ public class HavingOperator {
         String operation = "";
         String tableName;
         long constantValue = 0;
-        long aggResult = 0;
+        double aggResult = 0;
         int columnIndex = 0;
 
         Set keySet = groupByMap.keySet();
@@ -136,11 +136,13 @@ public class HavingOperator {
                         if(primitiveValues[columnIndex].toLong() > max){
                             max = primitiveValues[columnIndex].toLong();
                         }
+                        if(primitiveValues[columnIndex]!=null){
+                            count = count + 1;
+                        }
                     }
                     catch (PrimitiveValue.InvalidPrimitive e){
                         e.printStackTrace();
                     }
-                    count = count + 1;
                 }
                 if(functionName.toLowerCase().equals("count")){
                     aggResult = count;

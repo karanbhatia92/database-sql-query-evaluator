@@ -1,9 +1,8 @@
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.PrimitiveValue;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.select.AllColumns;
-import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SelectItemVisitor;
+import net.sf.jsqlparser.statement.select.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,14 +12,27 @@ import java.util.HashMap;
  */
 public class ProjectionVisitor implements SelectItemVisitor {
 
-    public Column[] schema = null;
+    public Column[] schema;
     public ArrayList<Integer> columnIndexes;
     HashMap<String, String> aliasHashMap;
+    ArrayList<PrimitiveValue[]> tupleList;
+    public ArrayList<PrimitiveValue[]> projectionVisitorOutList;
+    public Column[] projectionSchema;
+    Boolean projectionFlag;
+    PlainSelect plainSelect;
+    HashMap groupByMap;
 
-    public ProjectionVisitor(Column[] schema, HashMap<String, String> aliasHashMap) {
+    public ProjectionVisitor(Column[] schema, HashMap<String, String> aliasHashMap,
+                             Boolean projectionFlag, PlainSelect plainSelect,
+                             ArrayList tupleList, HashMap groupByMap) {
         columnIndexes = new ArrayList<>();
         this.schema = schema;
         this.aliasHashMap = aliasHashMap;
+        this.projectionFlag = projectionFlag;
+        this.plainSelect = plainSelect;
+        this.tupleList = tupleList;
+        this.groupByMap = groupByMap;
+        this.projectionSchema = null;
     }
     public void visit(AllColumns allColumns) {
         for(int i = 0; i < schema.length; i++) {
@@ -44,8 +56,9 @@ public class ProjectionVisitor implements SelectItemVisitor {
 
     public void visit(SelectExpressionItem selectExpressionItem) {
         String tableName;
-        selectExpressionItem.getAlias();
+        String projectionAliasName = "";
         Expression expression = selectExpressionItem.getExpression();
+        Expression orderByExp = plainSelect.getOrderByElements().get(0).getExpression();
         if(expression instanceof Column) {
             Column column = (Column)expression;
             if(column.getTable().getName() != null) {
@@ -73,6 +86,31 @@ public class ProjectionVisitor implements SelectItemVisitor {
             }
 
         }
+        else if(expression instanceof Function){
+            if(!(projectionFlag)){ // !projectionFlag indicates aggregation operation in select
+                Function function = (Function) expression;
+                String orderExpName = "";
+                Boolean isAsc = false;
+                if(selectExpressionItem.getAlias()!=null){
+                    projectionAliasName = selectExpressionItem.getAlias();
+                    if(orderByExp instanceof Column){
+                        orderExpName = ((Column) orderByExp).getColumnName();
+                        if(orderExpName.equals(projectionAliasName)){
+                            OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap,
+                                    aliasHashMap, schema, tupleList, isAsc);
+                            projectionVisitorOutList = orderEvaluator.execute();
+                            projectionSchema = orderEvaluator.projectionSchema;
+                            columnIndexes.add(projectionSchema.length - 1);
+                        }
+                    }
+                    else{
+                        System.out.println("ERROR ProjectinVisitor: orderByExp not a column");
+                    }
+                }
+                else{
+                    System.out.println("ERROR ProjectionVisitor: Function without alias");
+                }
+            }
+        }
     }
-
 }
