@@ -1,3 +1,4 @@
+import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
@@ -17,6 +18,7 @@ public class FromScanner implements FromItemVisitor {
     HashMap<String, CreateTable> createTableMap;
     HashMap<String, String> aliasHasMap;
     HashMap<String, Operator> operatorMap;
+    HashMap<String, Long> fileSizeMap;
     ArrayList<Column> schemaList;
     public Operator source = null;
 
@@ -25,6 +27,7 @@ public class FromScanner implements FromItemVisitor {
         aliasHasMap = new HashMap<>();
         operatorMap = new HashMap<>();
         schemaList = new ArrayList<>();
+        fileSizeMap = new HashMap<>();
     }
     public void visit(SubJoin subjoin) {
 
@@ -71,8 +74,9 @@ public class FromScanner implements FromItemVisitor {
             ColumnDefinition col = (ColumnDefinition)cols.get(i);
             schemaList.add(new Column(table, col.getColumnName().toLowerCase()));
         }
-        source = new ScanOperator(
-                new File(table.getName().toLowerCase() + ".csv"), ct);
+        File file = new File(table.getName().toLowerCase() + ".csv");
+        source = new ScanOperator(file, ct);
         operatorMap.put(table.getName().toLowerCase(), source);
+        fileSizeMap.put(table.getName().toLowerCase(), file.length());
     }
 }

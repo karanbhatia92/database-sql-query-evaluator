@@ -26,7 +26,7 @@ public class SubMain {
         HashMap<String, HashMap<String, ColumnIdType>> databaseMap = new HashMap<>();
         HashMap<PrimitiveValue,ArrayList<PrimitiveValue[]>> groupByMap = new HashMap<>();
         ArrayList<PrimitiveValue[]> outputTupleList = new ArrayList<>();
-
+        HashMap<String, Long> fileSizeMap = new HashMap<>();
         HashMap<String, String> aliasHashMap;
         HashMap<String, Operator> operatorMap;
         List<Join> joinList;
@@ -45,6 +45,7 @@ public class SubMain {
         }
         aliasHashMap = fromscan.aliasHasMap;
         operatorMap = fromscan.operatorMap;
+        fileSizeMap = fromscan.fileSizeMap;
         schema = new Column[fromscan.schemaList.size()];
         schema = fromscan.schemaList.toArray(schema);
         createTableMap = fromscan.createTableMap;
@@ -55,7 +56,8 @@ public class SubMain {
                     schema,
                     plainSelect.getWhere(),
                     aliasHashMap,
-                    createTableMap
+                    createTableMap,
+                    fileSizeMap
             );
         } else {
             for (String key : operatorMap.keySet()) {
