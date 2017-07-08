@@ -351,9 +351,25 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                 joinedTablesList.add(tableName2);
             } else {
                 smallJoin = bigJoin;
-                String newTableName;
-                Operator newOperator;
-                if(joinedTablesList.contains(tableName1)) {
+                String newTableName = null;
+                Operator newOperator = null;
+                if(joinedTablesList.contains(tableName1) && joinedTablesList.contains(tableName2)) {
+                    for (int i = 0; i < smallJoin.size(); i++) {
+                        Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+
+                        try {
+                            PrimitiveValue result = evaluator.eval(equalsTo);
+                            BooleanValue boolResult = (BooleanValue)result;
+                            if(boolResult.getValue()) {
+                                tempResult.add(smallJoin.get(i));
+                            }
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    bigJoin = tempResult;
+                    return;
+                } else if(joinedTablesList.contains(tableName1)) {
                     newTableName = tableName2;
                     newOperator = oper2;
                 } else if(joinedTablesList.contains(tableName2)) {
@@ -415,8 +431,6 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
 
                 bigJoin = tempResult;
                 joinedTablesList.add(newTableName);
-
-
             }
 
         } else {
@@ -428,11 +442,8 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                 col1 = (Column)rightExpression;
             }
             String tableName = null;
-            try {
-                tableName = col1.getTable().getWholeTableName().toLowerCase();
-            } catch (NullPointerException e) {
-                e.printStackTrace();
-            }
+
+            tableName = col1.getTable().getWholeTableName().toLowerCase();
 
             tableName = aliasHashMap.get(tableName);
 /*
