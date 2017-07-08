@@ -13,6 +13,7 @@ import java.util.HashMap;
  */
 public class SubselectEvaluator implements Operator {
     ArrayList<PrimitiveValue[]> outputTupleList;
+    HashMap<String, Integer> databaseMap;
     int tupleLocation;
     ArrayList<Column> schemaList;
     Column[] schema;
@@ -20,9 +21,11 @@ public class SubselectEvaluator implements Operator {
     PlainSelect plainSelect;
     HashMap<String, CreateTable> createTableMap;
 
-    public SubselectEvaluator(PlainSelect plainSelect, HashMap createTableMap, String alias){
+    public SubselectEvaluator(PlainSelect plainSelect, HashMap createTableMap,
+                              String alias, HashMap<String, Integer> databaseMap){
         this.plainSelect = plainSelect;
         this.createTableMap = createTableMap;
+        this.databaseMap = databaseMap;
         this.alias = alias;
         outputTupleList = new ArrayList<>();
         schemaList = new ArrayList<>();
@@ -30,7 +33,7 @@ public class SubselectEvaluator implements Operator {
     }
 
     public void execute(){
-        SubMain subMain = new SubMain(this.plainSelect, this.createTableMap);
+        SubMain subMain = new SubMain(plainSelect, createTableMap, databaseMap);
         outputTupleList = subMain.execute();
         Column[] tempSchema = subMain.schema;
         Table table = new Table("fromTable");

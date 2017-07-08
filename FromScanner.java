@@ -1,3 +1,4 @@
+import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
@@ -17,14 +18,18 @@ public class FromScanner implements FromItemVisitor {
     HashMap<String, CreateTable> createTableMap;
     HashMap<String, String> aliasHasMap;
     HashMap<String, Operator> operatorMap;
+    HashMap<String, Long> fileSizeMap;
     ArrayList<Column> schemaList;
+    HashMap<String, Integer> databaseMap;
     public Operator source = null;
 
-    public FromScanner(HashMap<String, CreateTable> createTableMap) {
+    public FromScanner(HashMap<String, CreateTable> createTableMap, HashMap<String, Integer> databaseMap) {
         this.createTableMap = createTableMap;
+        this.databaseMap = databaseMap;
         aliasHasMap = new HashMap<>();
         operatorMap = new HashMap<>();
         schemaList = new ArrayList<>();
+        fileSizeMap = new HashMap<>();
     }
     public void visit(SubJoin subjoin) {
 
@@ -45,7 +50,7 @@ public class FromScanner implements FromItemVisitor {
         if(selectBody instanceof PlainSelect){
             PlainSelect plainSelect = (PlainSelect) selectBody;
             SubselectEvaluator subselectEvaluator = new SubselectEvaluator(
-                    plainSelect, createTableMap, alias
+                    plainSelect, createTableMap, alias, databaseMap
             );
             subselectEvaluator.execute();
             tempSchema = subselectEvaluator.schema;
@@ -71,8 +76,9 @@ public class FromScanner implements FromItemVisitor {
             ColumnDefinition col = (ColumnDefinition)cols.get(i);
             schemaList.add(new Column(table, col.getColumnName().toLowerCase()));
         }
-        source = new ScanOperator(
-                new File(table.getName().toLowerCase() + ".csv"), ct);
+        File file = new File(table.getName().toLowerCase() + ".csv");
+        source = new ScanOperator(file, ct);
         operatorMap.put(table.getName().toLowerCase(), source);
+        fileSizeMap.put(table.getName().toLowerCase(), file.length());
     }
 }
