@@ -3,6 +3,7 @@ import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.PrimitiveValue;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
@@ -16,6 +17,8 @@ import java.util.*;
 public class OrderByOperator {
 
     HashMap<PrimitiveValue,ArrayList<PrimitiveValue[]>> groupByMap;
+    HashMap<String, Integer> databaseMap;
+    HashMap<String, CreateTable> createTableMap;
     ArrayList<PrimitiveValue[]> outputTupleList; // output of group or having or selection operation
     ArrayList<PrimitiveValue[]> orderByOutput;
     HashMap<String, String> aliasHashMap;
@@ -30,13 +33,17 @@ public class OrderByOperator {
             HashMap<String, String> aliasHashMap,
             Column[] schema,
             PlainSelect plainSelect,
-            ArrayList outputTupleList
+            ArrayList outputTupleList,
+            HashMap<String, CreateTable> createTableMap,
+            HashMap<String, Integer> databaseMap
     ){
         this.groupByMap = groupByMap;
         this.aliasHashMap = aliasHashMap;
         this.schema = schema;
         this.plainSelect = plainSelect;
         this.outputTupleList = outputTupleList;
+        this.databaseMap = databaseMap;
+        this.createTableMap = createTableMap;
         orderByOutput = new ArrayList<>();
         groupByColumnName = "";
         orderByColumnName = "";
@@ -93,8 +100,8 @@ public class OrderByOperator {
                         }
                         if(orderExpName.equals(projectionAliasName)){
                             // order evaluatior class returns final arraylist and group by map
-                            OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap,
-                                                aliasHashMap, schema, outputTupleList, isAsc);
+                            OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap, aliasHashMap,
+                                    schema, outputTupleList, isAsc);
                             orderByList = orderEvaluator.execute();
                         }
                     }
@@ -109,8 +116,8 @@ public class OrderByOperator {
             Set keySet = groupByMap.keySet();
             Iterator itr = keySet.iterator();
             if(plainSelect.getGroupByColumnReferences()==null){
-                OrderComparator orderComparator = new OrderComparator(
-                        aliasHashMap, outputTupleList.get(0), columnIndexOrder, schema, isAsc
+                OrderComparator orderComparator = new OrderComparator(aliasHashMap, outputTupleList.get(0),
+                        columnIndexOrder, schema, isAsc, createTableMap, databaseMap
                 );
                 Collections.sort(outputTupleList,orderComparator);
             }
@@ -126,8 +133,8 @@ public class OrderByOperator {
                         tempList.add(arrayList.get(0));
                         groupByMap.put(key,tempList);
                     }
-                    OrderComparator orderComparator = new OrderComparator(
-                            aliasHashMap, orderByOutput.get(0), columnIndexOrder, schema, isAsc
+                    OrderComparator orderComparator = new OrderComparator(aliasHashMap, orderByOutput.get(0),
+                            columnIndexOrder, schema, isAsc, createTableMap, databaseMap
                     );
                     Collections.sort(orderByOutput,orderComparator);
                 }
@@ -135,8 +142,8 @@ public class OrderByOperator {
                     while (itr.hasNext()){
                         PrimitiveValue key = (PrimitiveValue) itr.next();
                         ArrayList<PrimitiveValue[]> arrayList = groupByMap.get(key);
-                        OrderComparator orderComparator = new OrderComparator(
-                                aliasHashMap, arrayList.get(0), columnIndexOrder, schema, isAsc
+                        OrderComparator orderComparator = new OrderComparator(aliasHashMap, arrayList.get(0),
+                                columnIndexOrder, schema, isAsc, createTableMap, databaseMap
                         );
                         Collections.sort(arrayList,orderComparator);
                         groupByMap.replace(key,arrayList);

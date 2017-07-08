@@ -37,6 +37,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
     HashMap<String, Long> fileSizeMap;
     HashMap<String, HashMap<String,ArrayList<PrimitiveValue[]>>> tableHash;
     Boolean leftTupleNull;
+    Evaluator evaluator;
     String largestTable = null;
 
     public SelectionOperator(HashMap<String, Integer> databaseMap,
@@ -51,6 +52,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         this.bigJoin = new ArrayList<>();
         this.createTableMap = createTableMap;
         this.fileSizeMap = fileSizeMap;
+        evaluator = new Evaluator();
 
         if(operatorMap.keySet().size() != 1) {
             expressionArrayList = generateOrderedExpressionList(condition);
@@ -143,9 +145,9 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                 }
 
                 final PrimitiveValue[] tupleCopy = tuple;
-                Evaluator eval = new Evaluator(tupleCopy,schema,aliasHashMap);
+                evaluator.setVariables(tupleCopy, schema, aliasHashMap, createTableMap, databaseMap);
                 try {
-                    PrimitiveValue result = eval.eval(condition);
+                    PrimitiveValue result = evaluator.eval(condition);
                     BooleanValue boolResult = (BooleanValue)result;
                     if(!boolResult.getValue()) {
                         tuple = null;
@@ -371,7 +373,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         bigJoin = new ArrayList<>();
 
         for (int i = 0; i < smallJoin.size(); i++) {
-            Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+            evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
             try {
                 PrimitiveValue result = evaluator.eval(orExpression);
                 BooleanValue boolResult = (BooleanValue)result;
@@ -481,7 +483,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                 Column currentCol = null;
                 if(joinedTablesList.contains(tableName1) && joinedTablesList.contains(tableName2)) {
                     for (int i = 0; i < smallJoin.size(); i++) {
-                        Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                        evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
                         try {
                             PrimitiveValue result = evaluator.eval(equalsTo);
                             BooleanValue boolResult = (BooleanValue)result;
@@ -626,7 +628,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
             if(joinedTablesList.contains(tableName)) {
 
                 for (int i = 0; i < smallJoin.size(); i++) {
-                    Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                    evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
 
                     try {
                         PrimitiveValue result = evaluator.eval(equalsTo);
@@ -666,7 +668,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         if(joinedTablesList.contains(tableName)) {
 
             for (int i = 0; i < smallJoin.size(); i++) {
-                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
 
                 try {
                     PrimitiveValue result = evaluator.eval(greaterThan);
@@ -704,7 +706,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         if(joinedTablesList.contains(tableName)) {
 
             for (int i = 0; i < smallJoin.size(); i++) {
-                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
 
                 try {
                     PrimitiveValue result = evaluator.eval(greaterThanEquals);
@@ -736,7 +738,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         } else if (itemsList instanceof SubSelect) {
             SelectBody selectBody = ((SubSelect) itemsList).getSelectBody();
             if(selectBody instanceof PlainSelect){
-                String alias = "IN";
+                String alias = "in";
                 PlainSelect plainSelect = (PlainSelect) selectBody;
                 SubselectEvaluator subselect = new SubselectEvaluator(
                         plainSelect, createTableMap, alias, databaseMap
@@ -801,7 +803,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         if(joinedTablesList.contains(tableName)) {
 
             for (int i = 0; i < smallJoin.size(); i++) {
-                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
 
                 try {
                     PrimitiveValue result = evaluator.eval(likeExpression);
@@ -839,7 +841,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         if(joinedTablesList.contains(tableName)) {
 
             for (int i = 0; i < smallJoin.size(); i++) {
-                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
 
                 try {
                     PrimitiveValue result = evaluator.eval(minorThan);
@@ -878,7 +880,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         if(joinedTablesList.contains(tableName)) {
 
             for (int i = 0; i < smallJoin.size(); i++) {
-                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
 
                 try {
                     PrimitiveValue result = evaluator.eval(minorThanEquals);
@@ -916,7 +918,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         if(joinedTablesList.contains(tableName)) {
 
             for (int i = 0; i < smallJoin.size(); i++) {
-                Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
+                evaluator.setVariables(smallJoin.get(i), currentSchema, aliasHashMap, createTableMap, databaseMap);
 
                 try {
                     PrimitiveValue result = evaluator.eval(notEqualsTo);

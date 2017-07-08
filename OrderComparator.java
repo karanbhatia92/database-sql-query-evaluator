@@ -2,6 +2,7 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
 import net.sf.jsqlparser.expression.operators.relational.MinorThan;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.create.table.CreateTable;
 
 import java.sql.SQLException;
 import java.util.Comparator;
@@ -12,6 +13,8 @@ import java.util.HashMap;
  */
 public class OrderComparator implements Comparator<PrimitiveValue[]> {
     HashMap<String, String> aliasHashMap = new HashMap<>();
+    HashMap<String, Integer> databaseMap;
+    HashMap<String, CreateTable> createTableMap;
     PrimitiveValue[] tuple;
     Integer columnIndex;
     Column[] schema;
@@ -22,7 +25,9 @@ public class OrderComparator implements Comparator<PrimitiveValue[]> {
             PrimitiveValue[] tuple,
             Integer columnIndex,
             Column[] schema,
-            Boolean isAsc
+            Boolean isAsc,
+            HashMap<String, CreateTable> createTableMap,
+            HashMap<String, Integer> databaseMap
     ){
         this.aliasHashMap = aliasHashMap;
         this.tuple = tuple;
@@ -33,7 +38,8 @@ public class OrderComparator implements Comparator<PrimitiveValue[]> {
 
     @Override
     public int compare(PrimitiveValue[] pv1, PrimitiveValue[] pv2) {
-        Evaluator eval = new Evaluator(tuple,schema,aliasHashMap);
+        Evaluator eval = new Evaluator();
+        eval.setVariables(tuple, schema, aliasHashMap, createTableMap, databaseMap);
 
         if(isAsc){
             GreaterThan cmp = new GreaterThan();

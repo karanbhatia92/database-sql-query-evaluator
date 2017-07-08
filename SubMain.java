@@ -103,7 +103,7 @@ public class SubMain {
         if(plainSelect.getOrderByElements()!=null){
             List<OrderByElement> orderByList = plainSelect.getOrderByElements();
             OrderByOperator orderByOperator = new OrderByOperator(
-                    groupByMap, aliasHashMap, schema, plainSelect, outputTupleList
+                    groupByMap, aliasHashMap, schema, plainSelect, outputTupleList, createTableMap, databaseMap
             );
             orderByOperator.orderTuples(orderByList);
             outputTupleList = orderByOperator.getOrderByOutput();
