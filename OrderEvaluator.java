@@ -1,7 +1,11 @@
 import net.sf.jsqlparser.expression.*;
+import net.sf.jsqlparser.expression.operators.arithmetic.Addition;
 import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.PrimitiveType;
+import net.sf.jsqlparser.statement.create.table.CreateTable;
 
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -12,6 +16,7 @@ public class OrderEvaluator {
     ArrayList<PrimitiveValue[]> outputTupleList; // output of group or having or selection operation
     ArrayList<PrimitiveValue[]> orderEvalOutput;
     HashMap<String, String> aliasHashMap;
+    HashMap<String, CreateTable> createTableMap;
     String projectionAliasName = "";
     Column[] schema;
     public Column[] projectionSchema;
@@ -29,80 +34,61 @@ public class OrderEvaluator {
         this.isAsc = isAsc;
         this.orderEvalOutput = new ArrayList<>();
         this.projectionAliasName = projectionAliasName;
+        this.createTableMap = createTableMap;
     }
 
     public ArrayList execute(){
+        HashMap<Double, ArrayList<PrimitiveValue[]>> aggregateMap = new HashMap<>();
         String functionName = function.getName();
         Boolean allColumns = function.isAllColumns();
-        Expression columnExpression;
         int schemaSize = schema.length + 1;
-        ArrayList<Integer> columnIndexList = new ArrayList<>();
-        ArrayList<Long> constantList = new ArrayList<>();
+        Double aggResult = 0.0;
+
         projectionSchema = new Column[schemaSize];
         for(int i = 0; i < schema.length; i++){
             projectionSchema[i] = schema[i];
         }
-        projectionSchema[schema.length] = new Column(null,projectionAliasName);
+        projectionSchema[schemaSize-1] = new Column(null,projectionAliasName);
 
-        if(!allColumns){
-            columnExpression = function.getParameters().getExpressions().get(0);
-            ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(aliasHashMap, schema);
-            expressionEvaluator.solve(columnExpression);
-            columnIndexList = expressionEvaluator.columnIndexList;
-            constantList = expressionEvaluator.constantList;
-        }
-
-        HashMap<Double, ArrayList<PrimitiveValue[]>> aggregateMap = new HashMap<>();
         Set keySet = groupByMap.keySet();
         Iterator itr = keySet.iterator();
-        Double aggResult = 0.0;
+        Expression columnExpression = function.getParameters().getExpressions().get(0);
 
         while(itr.hasNext()){
             PrimitiveValue key = (PrimitiveValue) itr.next();
             ArrayList arraylist = groupByMap.get(key);
             if(!allColumns){
                 Double count = 0.0, sum = 0.0, min = Double.MAX_VALUE, max = Double.MIN_VALUE;
-                if(columnIndexList.size() > 1){
-                    for(int i = 0; i < arraylist.size(); i++){
-                        PrimitiveValue[] primitiveValues = (PrimitiveValue[]) arraylist.get(i);
-                        try{
-                            Double diff = constantList.get(0).doubleValue() - primitiveValues[columnIndexList.get(1)].toDouble();
-                            Double mult = primitiveValues[columnIndexList.get(0)].toDouble() * diff;
-                            sum = sum + mult;
+                for(int i = 1; i < arraylist.size(); i++){
+                    Evaluator evaluator = new Evaluator(((PrimitiveValue[]) arraylist.get(i)),
+                            schema, aliasHashMap);
+                    try{
+                        PrimitiveValue result = evaluator.eval(columnExpression);
+
+                            sum = sum + result.toDouble();
+                            if(result.toDouble() < min){
+                                min = result.toDouble();
+                            }
+                            if(result.toDouble() > max){
+                                max = result.toDouble();
+                            }
+
+                        if(result instanceof LongValue){
+
                         }
-                        catch (PrimitiveValue.InvalidPrimitive e){
-                            e.printStackTrace();
+                        else if (result instanceof DoubleValue){
+
                         }
                     }
-                }
-
-                else if(columnIndexList.size() == 1){
-                    int columnIndex = columnIndexList.get(0);
-                    for(int i = 0; i < arraylist.size(); i++){
-                        PrimitiveValue[] primitiveValues = (PrimitiveValue[]) arraylist.get(i);
-                        try{
-                            sum = sum + primitiveValues[columnIndex].toLong();
-                            if(primitiveValues[columnIndex].toLong() < min){
-                                min = primitiveValues[columnIndex].toDouble();
-                            }
-                            if(primitiveValues[columnIndex].toLong() > max){
-                                max = primitiveValues[columnIndex].toDouble();
-                            }
-                            if(primitiveValues[columnIndex]!=null){
-                                count = count + 1;
-                            }
-                        }
-                        catch (PrimitiveValue.InvalidPrimitive e){
-                            e.printStackTrace();
-                        }
+                    catch (SQLException e){
+                        e.printStackTrace();
                     }
                 }
-
                 if(functionName.toLowerCase().equals("count")){
                     aggResult = count;
                 }
                 else if(functionName.toLowerCase().equals("avg")){
-                    aggResult = sum/arraylist.size();
+                    aggResult = sum/count;
                 }
                 else if(functionName.toLowerCase().equals("sum")){
                     aggResult = sum;
@@ -119,13 +105,7 @@ public class OrderEvaluator {
                 aggResult = temp.doubleValue();
             }
 
-            PrimitiveValue pv;
-            if(functionName.toLowerCase().equals("count")){
-                pv = new LongValue(aggResult.toString());
-            }
-            else{
-                pv = new DoubleValue(aggResult.toString());
-            }
+            PrimitiveValue pv = new DoubleValue(aggResult.toString());
             PrimitiveValue[] tempPrimVals = Arrays.copyOf((PrimitiveValue[]) arraylist.get(0),schemaSize);
             tempPrimVals[schemaSize - 1] = pv;
             if(aggregateMap.containsKey(aggResult)){

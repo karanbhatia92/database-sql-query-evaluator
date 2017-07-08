@@ -68,16 +68,9 @@ class ExpressionEvaluator implements ExpressionVisitor {
         System.out.println("InsideDivisionExpression");
     }
     public void visit(Multiplication multiplication) {
-        Expression leftExpression = multiplication.getLeftExpression();
-        leftExpression.accept(this);
-        Expression rightExpression = multiplication.getRightExpression();
-        rightExpression.accept(this);
     }
     public void visit(Subtraction subtraction) {
-        Expression leftExpression = subtraction.getLeftExpression();
-        leftExpression.accept(this);
-        Expression rightExpression = subtraction.getRightExpression();
-        rightExpression.accept(this);
+
     }
     public void visit(AndExpression andExpression) { System.out.println("InsideANDExpression"); }
     public void visit(OrExpression orExpression) {
@@ -114,31 +107,7 @@ class ExpressionEvaluator implements ExpressionVisitor {
     }
     public void visit(Column tableColumn) {
 
-        Column column = tableColumn;
-        String tableName;
-        if( column.getTable().getWholeTableName()!= null) {
-            if(aliasHashMap.containsKey(column.getTable().getName().toLowerCase())) {
-                tableName = aliasHashMap.get(column.getTable().getName().toLowerCase());
-                for(int i = 0; i < schema.length; i++) {
-                    if(schema[i].getTable().getName().toLowerCase().equals(tableName)) {
-                        if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
-                            columnIndexList.add(i);
-                            break;
-                        }
-                    }
-                }
-            } else {
-                System.out.println("ERROR in ExpressionEvaluator: alias not present in aliasHashMap");
-            }
-        }
-        else {
-            for(int i = 0; i < schema.length; i++) {
-                if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
-                    columnIndexList.add(i);
-                    break;
-                }
-            }
-        }
+
 
     }
     public void visit(SubSelect subSelect) {

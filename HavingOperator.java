@@ -45,7 +45,7 @@ public class HavingOperator {
 
         Set keySet = groupByMap.keySet();
         Iterator itr = keySet.iterator();
-        ArrayList<PrimitiveValue> keyToRemove = new ArrayList();
+        ArrayList keyToRemove = new ArrayList();
         Boolean allColumns = false;
         Expression leftExpression = null;
         Expression rightExpression = null;
@@ -126,33 +126,38 @@ public class HavingOperator {
         }
 
         if(projectionFlag){
-/*
             for(int i = 0; i < outputTupleList.size(); i++){
-                PrimitiveValue count =  outputTupleList[columnIndex];
+                PrimitiveValue[] tempList =  (PrimitiveValue[]) outputTupleList.get(i);
+                try{
+                    aggResult = tempList[columnIndex].toDouble();
+                }
+                catch (PrimitiveValue.InvalidPrimitive e){
+                    e.printStackTrace();
+                }
                 switch (operation){
                     case "GreaterThan":
-                        if(aggResult <= constantValue){
-                            keyToRemove.add(key);
+                        if(aggResult > constantValue){
+                            keyToRemove.add(i);
                         }
                         break;
                     case "GreaterThanEquals":
-                        if(aggResult < constantValue){
-                            keyToRemove.add(key);
+                        if(aggResult >= constantValue){
+                            keyToRemove.add(i);
                         }
                         break;
                     case "MinorThan":
-                        if(aggResult >= constantValue){
-                            keyToRemove.add(key);
+                        if(aggResult < constantValue){
+                            keyToRemove.add(i);
                         }
                         break;
                     case "MinorThanEquals":
-                        if(aggResult > constantValue){
-                            keyToRemove.add(key);
+                        if(aggResult <= constantValue){
+                            keyToRemove.add(i);
                         }
                         break;
                     case "EqualsTo":
-                        if(aggResult != constantValue){
-                            keyToRemove.add(key);
+                        if(aggResult == constantValue){
+                            keyToRemove.add(i);
                         }
                         break;
                     default:
@@ -160,7 +165,6 @@ public class HavingOperator {
                 }
 
             }
-*/
         }
 
         else{
@@ -246,9 +250,16 @@ public class HavingOperator {
             }
         }
 
-        for(int i = 0; i < keyToRemove.size(); i++){
-            PrimitiveValue key = keyToRemove.get(i);
-            groupByMap.remove(key);
+        int keyLength = keyToRemove.size();
+        for(int i = 0; i < keyLength; i++){
+            if(projectionFlag){
+                PrimitiveValue[] primitiveValues = outputTupleList.get((int)keyToRemove.get(i));
+                havingOutput.add(primitiveValues);
+            }
+            else{
+                PrimitiveValue key = (PrimitiveValue) keyToRemove.get(i);
+                groupByMap.remove(key);
+            }
         }
 
     }
@@ -290,15 +301,22 @@ public class HavingOperator {
 
     public ArrayList getHavingOutput(){
 
-        Set keySet = groupByMap.keySet();
-        Iterator itr = keySet.iterator();
-        while (itr.hasNext()) {
-            PrimitiveValue key = (PrimitiveValue) itr.next();
-            ArrayList arraylist = groupByMap.get(key);
-            PrimitiveValue[] tuple = (PrimitiveValue[]) arraylist.get(0);
-            havingOutput.add(tuple);
+        if(projectionFlag){
+            return havingOutput;
         }
-        return havingOutput;
+
+        else{
+            Set keySet = groupByMap.keySet();
+            Iterator itr = keySet.iterator();
+            while (itr.hasNext()) {
+                PrimitiveValue key = (PrimitiveValue) itr.next();
+                ArrayList arraylist = groupByMap.get(key);
+                PrimitiveValue[] tuple = (PrimitiveValue[]) arraylist.get(0);
+                havingOutput.add(tuple);
+            }
+            return havingOutput;
+        }
+
     }
 
     public HashMap getMap(){

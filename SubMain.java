@@ -10,6 +10,7 @@ import net.sf.jsqlparser.statement.select.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -21,11 +22,19 @@ public class SubMain {
     public Column[] schema;
     public Column[] newSchema;
     HashMap<String, Integer> databaseMap;
+    HashSet<String> fromObjects;
+    HashSet<String> projectionObjects;
+    HashSet<String> groupObject;
+    HashSet<String> orderObject;
 
     public SubMain(PlainSelect plainSelect, HashMap createTableMap, HashMap<String, Integer> databaseMap){
         this.plainSelect = plainSelect;
         this.createTableMap = createTableMap;
         this.databaseMap = databaseMap;
+        projectionObjects = new HashSet<>();
+        fromObjects = new HashSet<>();
+        groupObject = new HashSet<>();
+        orderObject = new HashSet<>();
     }
     public ArrayList execute(){
 
@@ -51,6 +60,10 @@ public class SubMain {
         aliasHashMap = fromscan.aliasHasMap;
         operatorMap = fromscan.operatorMap;
         fileSizeMap = fromscan.fileSizeMap;
+        groupObject = fromscan.groupObject;
+        fromObjects = fromscan.fromObjects;
+        orderObject = fromscan.orderObject;
+
         schema = new Column[fromscan.schemaList.size()];
         schema = fromscan.schemaList.toArray(schema);
         Column[] projectedSchema = new Column[fromscan.schemaList.size()+1];
@@ -72,8 +85,13 @@ public class SubMain {
         }
 
         //group by
+
         if(plainSelect.getGroupByColumnReferences()!=null){
             List<Column> groupByColumns = plainSelect.getGroupByColumnReferences();
+            if(!groupObject.contains(groupByColumns.get(0).getWholeColumnName())){
+                groupObject.add(groupByColumns.get(0).getWholeColumnName());
+            }
+
             PrimitiveValue[] tuple = oper.readOneTuple();
             GroupByOperator groupByOperator = new GroupByOperator(schema, groupByColumns, aliasHashMap);
             while(tuple!=null){
@@ -106,17 +124,25 @@ public class SubMain {
             List<SelectItem> selectItemList = plainSelect.getSelectItems();
             ProjectionOperator projectionOperator = new ProjectionOperator(
                     outputTupleList, selectItemList, schema, aliasHashMap,
-                    projectionFlag, plainSelect, groupByMap
+                    projectionFlag, plainSelect, groupByMap, createTableMap
             );
             outputTupleList = projectionOperator.getProjectedOutput();
             groupByMap = projectionOperator.groupByMap;
-            projectedSchema = projectionOperator.projectionSchema;
             newSchema = projectionOperator.newSchema;
+            projectionObjects = projectionOperator.projectionObjects;
+            HashSet<String> tempOrder = projectionOperator.orderObject;
+            if(!tempOrder.isEmpty()){
+                for(String str : tempOrder){
+                    if(!orderObject.contains(str)){
+                        orderObject.add(str);
+                    }
+                }
+            }
 
             // Having
             Expression condition = plainSelect.getHaving();
             HavingOperator havingOperator = new HavingOperator(condition, groupByMap, aliasHashMap,
-                    projectedSchema, plainSelect, projectionFlag, outputTupleList);
+                    newSchema, plainSelect, projectionFlag, outputTupleList);
             havingOperator.filterGroupedEle();
             outputTupleList = havingOperator.getHavingOutput();
 
@@ -145,10 +171,18 @@ public class SubMain {
             List<SelectItem> selectItemList = plainSelect.getSelectItems();
             ProjectionOperator projectionOperator = new ProjectionOperator(
                     outputTupleList, selectItemList, schema, aliasHashMap,
-                    projectionFlag, plainSelect, groupByMap
+                    projectionFlag, plainSelect, groupByMap, createTableMap
             );
             outputTupleList = projectionOperator.getProjectedOutput();
             newSchema = projectionOperator.newSchema;
+            projectionObjects = projectionOperator.projectionObjects;
+            HashSet<String> tempOrder = projectionOperator.orderObject;
+            for(String str : tempOrder){
+                if(!orderObject.contains(str)){
+                    orderObject.add(str);
+                }
+            }
+
         }
 
         //Distinct
@@ -159,8 +193,11 @@ public class SubMain {
         }
 
         if(plainSelect.getLimit()!=null){
-            long limit = plainSelect.getLimit().getRowCount();
-
+            Long limit = plainSelect.getLimit().getRowCount();
+            int i = limit.intValue();
+            while(outputTupleList.size() > limit){
+                outputTupleList.remove(i);
+            }
         }
 
         return outputTupleList;

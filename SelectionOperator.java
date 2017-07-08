@@ -187,7 +187,6 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
         }
     }
 
-
     ArrayList<Expression> generateExpressionList(Expression e) {
         ArrayList<Expression> expressionArrayList = new ArrayList<>();
         if(e instanceof AndExpression) {

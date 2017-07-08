@@ -2,6 +2,7 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
 import net.sf.jsqlparser.expression.operators.relational.MinorThan;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.create.table.CreateTable;
 
 import java.sql.SQLException;
 import java.util.Comparator;
@@ -12,23 +13,21 @@ import java.util.HashMap;
  */
 public class OrderComparator implements Comparator<PrimitiveValue[]> {
     HashMap<String, String> aliasHashMap = new HashMap<>();
+    HashMap<String, CreateTable> createTableMap;
     PrimitiveValue[] tuple;
     Integer columnIndex;
     Column[] schema;
     Boolean isAsc;
 
-    public OrderComparator(
-            HashMap<String, String> aliasHashMap,
-            PrimitiveValue[] tuple,
-            Integer columnIndex,
-            Column[] schema,
-            Boolean isAsc
+    public OrderComparator( HashMap<String, String> aliasHashMap, PrimitiveValue[] tuple,
+            Integer columnIndex, Column[] schema, Boolean isAsc
     ){
         this.aliasHashMap = aliasHashMap;
         this.tuple = tuple;
         this.columnIndex = columnIndex;
         this.schema = schema;
         this.isAsc = isAsc;
+        this.createTableMap = createTableMap;
     }
 
     @Override

@@ -3,10 +3,12 @@ import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.PrimitiveValue;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Created by Karan on 6/28/2017.
@@ -22,6 +24,8 @@ public class ProjectionVisitor implements SelectItemVisitor {
     Boolean projectionFlag;
     PlainSelect plainSelect;
     HashMap groupByMap;
+    HashSet projectionObjects;
+    HashSet<String> orderObject;
 
     public ProjectionVisitor(Column[] schema, HashMap<String, String> aliasHashMap,
                              Boolean projectionFlag, PlainSelect plainSelect,
@@ -34,10 +38,25 @@ public class ProjectionVisitor implements SelectItemVisitor {
         this.tupleList = tupleList;
         this.groupByMap = groupByMap;
         this.projectionSchema = null;
+        projectionObjects = new HashSet();
+        orderObject = new HashSet<>();
     }
     public void visit(AllColumns allColumns) {
         for(int i = 0; i < schema.length; i++) {
             columnIndexes.add(i);
+        }
+        FromItem fromItem = plainSelect.getFromItem();
+        String tableName = "";
+        if(fromItem instanceof Table){
+            tableName = ((Table) fromItem).getWholeTableName();
+            for(Column column : schema){
+                //CHECK diff betwn column name and whole column name
+                if(column.getTable().getWholeTableName().toLowerCase().equals(tableName)){
+                    if(!projectionObjects.contains(column.getColumnName())){
+                        projectionObjects.add(column.getColumnName());
+                    }
+                }
+            }
         }
     }
 
@@ -50,6 +69,9 @@ public class ProjectionVisitor implements SelectItemVisitor {
             for(int i = 0; i < schema.length; i++){
                 if(schema[i].getTable().getWholeTableName().toLowerCase().equals(tableName)){
                     columnIndexes.add(i);
+                    if(!projectionObjects.contains(schema[i].getColumnName())){
+                        projectionObjects.add(schema[i].getColumnName());
+                    }
                 }
             }
         }
@@ -70,6 +92,9 @@ public class ProjectionVisitor implements SelectItemVisitor {
                         if(schema[i].getTable().getName().toLowerCase().equals(tableName)) {
                             if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                                 columnIndexes.add(i);
+                                if(!projectionObjects.contains(schema[i].getColumnName())){
+                                    projectionObjects.add(schema[i].getColumnName());
+                                }
                                 break;
                             }
                         }
@@ -81,6 +106,9 @@ public class ProjectionVisitor implements SelectItemVisitor {
                 for(int i = 0; i < schema.length; i++) {
                     if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                         columnIndexes.add(i);
+                        if(!projectionObjects.contains(schema[i].getColumnName())){
+                            projectionObjects.add(schema[i].getColumnName());
+                        }
                         break;
                     }
                 }
@@ -90,6 +118,8 @@ public class ProjectionVisitor implements SelectItemVisitor {
         }
         else if(expression instanceof Function){
             if(projectionFlag){
+                //CHECK if output is correct
+                projectionObjects.add(expression.toString());
                 Boolean isAsc = false;
                 if(plainSelect.getOrderByElements()!=null){
                     isAsc = plainSelect.getOrderByElements().get(0).isAsc();
@@ -101,6 +131,9 @@ public class ProjectionVisitor implements SelectItemVisitor {
                     projectionAliasName = selectExpressionItem.getAlias();
                     if(orderByExp instanceof Column){
                         orderExpName = ((Column) orderByExp).getColumnName();
+                        if(!orderObject.contains(orderExpName)){
+                            orderObject.add(orderExpName);
+                        }
                         if(orderExpName.equals(projectionAliasName)){
                             OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap,
                                     aliasHashMap, schema, tupleList, isAsc, projectionAliasName);
