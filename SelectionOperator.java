@@ -20,7 +20,7 @@ import java.util.*;
  */
 public class SelectionOperator implements Operator, ExpressionVisitor {
 
-    HashMap<String, HashMap<String, ColumnIdType>> databaseMap = new HashMap<>();
+    HashMap<String, Integer> databaseMap = new HashMap<>();
     HashMap<String, Operator> operatorMap;
     Column[] schema;
     Expression condition;
@@ -35,10 +35,11 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
     HashMap<String, CreateTable> createTableMap;
     HashMap<String, Integer> currentSchemaIndex;
     HashMap<String, Long> fileSizeMap;
-    HashMap<String, ArrayList<PrimitiveValue[]>>tableHash;
+    HashMap<String, HashMap<String,ArrayList<PrimitiveValue[]>>> tableHash;
     Boolean leftTupleNull;
+    String largestTable = null;
 
-    public SelectionOperator(HashMap<String, HashMap<String, ColumnIdType>> databaseMap,
+    public SelectionOperator(HashMap<String, Integer> databaseMap,
                              HashMap<String, Operator> operatorMap, Column[] schema,
                              Expression condition, HashMap<String, String> aliasHashMap,
                              HashMap<String, CreateTable> createTableMap, HashMap<String, Long> fileSizeMap) {
@@ -60,7 +61,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
 
     void generateTableHash() {
         tableHash = new HashMap<>();
-        for(int i = 1; i < expressionArrayList.size(); i++) {
+        for(int i = 0; i < expressionArrayList.size(); i++) {
             Expression exp = expressionArrayList.get(i);
             if(exp instanceof EqualsTo) {
                 Expression leftExp = ((EqualsTo) exp).getLeftExpression();
@@ -73,27 +74,50 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     String leftFullName = leftTableName + "." + leftcol.getColumnName().toLowerCase();
                     String rightFullName = rightTableName + "." + rightcol.getColumnName().toLowerCase();
 
-                    if(!tableHash.containsKey(leftFullName)) {
+                    if(!tableHash.containsKey(leftFullName) && !leftTableName.equals(largestTable)) {
                         Operator oper = null;
-                        ArrayList<PrimitiveValue[]> tupleList = new ArrayList<>();
+                        ArrayList<PrimitiveValue[]> tupleList;
+                        HashMap<String, ArrayList<PrimitiveValue[]>> columnHash = new HashMap<>();
                         PrimitiveValue oneTuple[];
                         oper = operatorMap.get(leftTableName);
                         while ((oneTuple = oper.readOneTuple()) != null) {
-                            tupleList.add(oneTuple);
+                            Integer index = databaseMap.get(leftFullName);
+                            String key = oneTuple[index].toRawString();
+                            if(columnHash.containsKey(key)) {
+                                tupleList = columnHash.get(key);
+                                tupleList.add(oneTuple);
+                                columnHash.put(key, tupleList);
+                            } else {
+                                tupleList = new ArrayList<>();
+                                tupleList.add(oneTuple);
+                                columnHash.put(key, tupleList);
+                            }
                         }
+                        tableHash.put(leftFullName, columnHash);
                         oper.reset();
-                        tableHash.put(leftFullName, tupleList);
+
                     }
-                    if(!tableHash.containsKey(rightFullName)) {
+                    if(!tableHash.containsKey(rightFullName) && !rightTableName.equals(largestTable)) {
                         Operator oper = null;
-                        ArrayList<PrimitiveValue[]> tupleList = new ArrayList<>();
+                        ArrayList<PrimitiveValue[]> tupleList;
+                        HashMap<String, ArrayList<PrimitiveValue[]>> columnHash = new HashMap<>();
                         PrimitiveValue oneTuple[];
                         oper = operatorMap.get(rightTableName);
                         while ((oneTuple = oper.readOneTuple()) != null) {
-                            tupleList.add(oneTuple);
+                            Integer index = databaseMap.get(rightFullName);
+                            String key = oneTuple[index].toRawString();
+                            if(columnHash.containsKey(key)) {
+                                tupleList = columnHash.get(key);
+                                tupleList.add(oneTuple);
+                                columnHash.put(key, tupleList);
+                            } else {
+                                tupleList = new ArrayList<>();
+                                tupleList.add(oneTuple);
+                                columnHash.put(key, tupleList);
+                            }
                         }
+                        tableHash.put(rightFullName, columnHash);
                         oper.reset();
-                        tableHash.put(rightFullName, tupleList);
                     }
                 } else {
                     break;
@@ -189,7 +213,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                 if(((EqualsTo) exp).getLeftExpression() instanceof Column
                         && ((EqualsTo) exp).getRightExpression() instanceof Column) {
                     Column a = (Column) ((EqualsTo) exp).getLeftExpression();
-                    Column b = (Column) ((EqualsTo) exp).getLeftExpression();
+                    Column b = (Column) ((EqualsTo) exp).getRightExpression();
                     String tableNamea = aliasHashMap.get(a.getTable().getWholeTableName().toLowerCase());
                     String tableNameb = aliasHashMap.get(b.getTable().getWholeTableName().toLowerCase());
                     long sizeOfa = fileSizeMap.get(tableNamea);
@@ -198,6 +222,11 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     if(size > maxSize) {
                         maxSize = size;
                         maxSizeIndex = i;
+                        if(sizeOfa > sizeOfb) {
+                            largestTable = tableNamea;
+                        } else {
+                            largestTable = tableNameb;
+                        }
                     }
                     joinCount++;
                 }
@@ -365,7 +394,6 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
             Operator oper1 = operatorMap.get(tableName1);
             Operator oper2 = operatorMap.get(tableName2);
             PrimitiveValue[] leftTuple;
-            PrimitiveValue[] rightTuple;
             PrimitiveValue[] jointTuple;
             ArrayList<PrimitiveValue[]> tempResult = new ArrayList<>();
             if(joinedTablesList.isEmpty()) {
@@ -388,42 +416,40 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     CreateTable ct1 = createTableMap.get(tableName1);
                     CreateTable ct2 = createTableMap.get(tableName2);
 
-                    List cols1 = ct1.getColumnDefinitions();
-                    List cols2 = ct2.getColumnDefinitions();
-                    currentSchema = new Column[cols1.size() + cols2.size()];
-                    for(int i = 0; i < cols1.size(); i++) {
-                        ColumnDefinition col = (ColumnDefinition)cols1.get(i);
-                        currentSchema[i] = new Column(new Table(null, tableName1),
-                                col.getColumnName().toLowerCase());
-                    }
-                    for(int i = cols1.size(); i < cols1.size() + cols2.size(); i++) {
-                        ColumnDefinition col = (ColumnDefinition)cols2.get(i - cols1.size());
-                        currentSchema[i] = new Column(new Table(null, tableName2),
-                                col.getColumnName().toLowerCase());
-                    }
 
-                    while ((rightTuple = oper2.readOneTuple()) != null) {
-                        jointTuple = new PrimitiveValue[leftTuple.length + rightTuple.length];
-                        for (int i = 0; i < leftTuple.length; i++) {
-                            jointTuple[i] = leftTuple[i];
+                    String fulltableName1 = tableName1 + "." + col1.getColumnName().toLowerCase();
+                    Integer index1 = databaseMap.get(fulltableName1);
+                    String fulltableName2 = tableName2 + "." + col2.getColumnName().toLowerCase();
+
+                    assert tableHash.containsKey(fulltableName2) : "Table Hash does not contain couln hash";
+                    if(tableHash.get(fulltableName2).containsKey(leftTuple[index1].toRawString())) {
+
+                        List cols1 = ct1.getColumnDefinitions();
+                        List cols2 = ct2.getColumnDefinitions();
+                        currentSchema = new Column[cols1.size() + cols2.size()];
+                        for(int i = 0; i < cols1.size(); i++) {
+                            ColumnDefinition col = (ColumnDefinition)cols1.get(i);
+                            currentSchema[i] = new Column(new Table(null, tableName1),
+                                    col.getColumnName().toLowerCase());
                         }
-                        for(int i = leftTuple.length; i < leftTuple.length + rightTuple.length; i++) {
-                            jointTuple[i] = rightTuple[i - leftTuple.length];
+                        for(int i = cols1.size(); i < cols1.size() + cols2.size(); i++) {
+                            ColumnDefinition col = (ColumnDefinition)cols2.get(i - cols1.size());
+                            currentSchema[i] = new Column(new Table(null, tableName2),
+                                    col.getColumnName().toLowerCase());
                         }
-                        Evaluator evaluator = new Evaluator(jointTuple, currentSchema, aliasHashMap);
-                        try {
-                            PrimitiveValue result = evaluator.eval(equalsTo);
-                            BooleanValue boolResult = (BooleanValue)result;
-                            if(boolResult.getValue()) {
-                                tempResult.add(jointTuple);
+
+                        ArrayList<PrimitiveValue[]> rightTupleList =
+                                tableHash.get(fulltableName2).get(leftTuple[index1].toRawString());
+                        for(PrimitiveValue rightTuple[] : rightTupleList) {
+                            jointTuple = new PrimitiveValue[leftTuple.length + rightTuple.length];
+                            for (int i = 0; i < leftTuple.length; i++) {
+                                jointTuple[i] = leftTuple[i];
                             }
-                        } catch (SQLException e) {
-                            e.printStackTrace();
+                            for(int i = leftTuple.length; i < leftTuple.length + rightTuple.length; i++) {
+                                jointTuple[i] = rightTuple[i - leftTuple.length];
+                            }
+                            tempResult.add(jointTuple);
                         }
-
-                    }
-                    if(rightTuple == null) {
-                        oper2.reset();
                     }
                 } while (tempResult.isEmpty());
                 if(leftTuple == null) {
@@ -436,11 +462,13 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
             } else {
                 smallJoin = bigJoin;
                 String newTableName = null;
+                String currentTableName = null;
                 Operator newOperator = null;
+                Column newCol = null;
+                Column currentCol = null;
                 if(joinedTablesList.contains(tableName1) && joinedTablesList.contains(tableName2)) {
                     for (int i = 0; i < smallJoin.size(); i++) {
                         Evaluator evaluator = new Evaluator(smallJoin.get(i), currentSchema, aliasHashMap);
-
                         try {
                             PrimitiveValue result = evaluator.eval(equalsTo);
                             BooleanValue boolResult = (BooleanValue)result;
@@ -455,9 +483,15 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     return;
                 } else if(joinedTablesList.contains(tableName1)) {
                     newTableName = tableName2;
+                    newCol = col2;
+                    currentCol = col1;
+                    currentTableName = tableName1;
                     newOperator = oper2;
                 } else if(joinedTablesList.contains(tableName2)) {
                     newTableName = tableName1;
+                    newCol = col1;
+                    currentCol = col2;
+                    currentTableName = tableName2;
                     newOperator = oper1;
                 } else {
                     newTableName = null;
@@ -466,28 +500,60 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     System.exit(1);
                 }
 
-                int i = 0;
+                String currentFullTableName = currentTableName + "." + currentCol.getColumnName().toLowerCase();
+                Integer currentIndex = -1;
+                String newFullTableName = newTableName + "." + newCol.getColumnName().toLowerCase();
+
+
+
                 Column[] lastJoinSchema = new Column[currentSchema.length];
                 for(int j = 0; j < currentSchema.length; j++) {
                     lastJoinSchema[j] = currentSchema[j];
+                    if(currentSchema[j].getWholeColumnName().equals(currentFullTableName)) {
+                        currentIndex = j;
+                    }
                 }
-
+                int i = 0;
                 while (i < smallJoin.size()){
                     leftTuple = smallJoin.get(i);
 
-                    CreateTable ct2 = createTableMap.get(newTableName);
 
 
-                    List cols2 = ct2.getColumnDefinitions();
-                    currentSchema = new Column[lastJoinSchema.length + cols2.size()];
-                    for(int j = 0; j < lastJoinSchema.length; j++) {
-                        currentSchema[j] = lastJoinSchema[j];
+                    if(tableHash.get(newFullTableName).containsKey(leftTuple[currentIndex].toRawString())) {
+                        CreateTable ct2 = createTableMap.get(newTableName);
+
+
+                        List cols2 = ct2.getColumnDefinitions();
+                        currentSchema = new Column[lastJoinSchema.length + cols2.size()];
+                        for(int j = 0; j < lastJoinSchema.length; j++) {
+                            currentSchema[j] = lastJoinSchema[j];
+                        }
+                        for(int j = lastJoinSchema.length; j < lastJoinSchema.length + cols2.size(); j++) {
+                            ColumnDefinition col = (ColumnDefinition)cols2.get(j - lastJoinSchema.length);
+                            currentSchema[j] = new Column(new Table(null, newTableName),
+                                    col.getColumnName().toLowerCase());
+                        }
+
+                        ArrayList<PrimitiveValue[]> rightTupleList =
+                                tableHash.get(newFullTableName).get(leftTuple[currentIndex].toRawString());
+                        for(PrimitiveValue rightTuple[] : rightTupleList) {
+                            jointTuple = new PrimitiveValue[leftTuple.length + rightTuple.length];
+                            for (int j = 0; j < leftTuple.length; j++) {
+                                jointTuple[j] = leftTuple[j];
+                            }
+                            for(int j = leftTuple.length; j < leftTuple.length + rightTuple.length; j++) {
+                                jointTuple[j] = rightTuple[j - leftTuple.length];
+                            }
+                            tempResult.add(jointTuple);
+                        }
                     }
-                    for(int j = lastJoinSchema.length; j < lastJoinSchema.length + cols2.size(); j++) {
-                        ColumnDefinition col = (ColumnDefinition)cols2.get(j - lastJoinSchema.length);
-                        currentSchema[j] = new Column(new Table(null, newTableName),
-                                col.getColumnName().toLowerCase());
-                    }
+
+                    i++;
+
+
+
+/*
+                    PrimitiveValue[] rightTuple;
                     while ((rightTuple = newOperator.readOneTuple()) != null) {
                         jointTuple = new PrimitiveValue[leftTuple.length + rightTuple.length];
                         for (int j = 0; j < leftTuple.length; j++) {
@@ -510,7 +576,8 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     if(rightTuple == null) {
                         newOperator.reset();
                     }
-                    i++;
+*/
+
                 }
 
                 bigJoin = tempResult;
@@ -659,7 +726,7 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                 String alias = "IN";
                 PlainSelect plainSelect = (PlainSelect) selectBody;
                 SubselectEvaluator subselect = new SubselectEvaluator(
-                        plainSelect, createTableMap, alias
+                        plainSelect, createTableMap, alias, databaseMap
                 );
                 subselect.execute();
                 schema = subselect.schema;

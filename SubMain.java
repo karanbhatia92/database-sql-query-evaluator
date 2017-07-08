@@ -17,13 +17,15 @@ public class SubMain {
     public HashMap<String, CreateTable> createTableMap;
     public Column[] schema;
     public Column[] newSchema;
+    HashMap<String, Integer> databaseMap;
 
-    public SubMain(PlainSelect plainSelect, HashMap createTableMap){
+    public SubMain(PlainSelect plainSelect, HashMap createTableMap, HashMap<String, Integer> databaseMap){
         this.plainSelect = plainSelect;
         this.createTableMap = createTableMap;
+        this.databaseMap = databaseMap;
     }
     public ArrayList execute(){
-        HashMap<String, HashMap<String, ColumnIdType>> databaseMap = new HashMap<>();
+
         HashMap<PrimitiveValue,ArrayList<PrimitiveValue[]>> groupByMap = new HashMap<>();
         ArrayList<PrimitiveValue[]> outputTupleList = new ArrayList<>();
         HashMap<String, Long> fileSizeMap = new HashMap<>();
@@ -32,7 +34,7 @@ public class SubMain {
         List<Join> joinList;
         Operator oper = null;
 
-        FromScanner fromscan = new FromScanner(createTableMap);
+        FromScanner fromscan = new FromScanner(createTableMap, databaseMap);
         plainSelect.getFromItem().accept(fromscan);
 
         if(plainSelect.getJoins() != null) {

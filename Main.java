@@ -19,7 +19,7 @@ public class Main {
     public static void main(String[] args) {
 
         ArrayList<File> sqlFiles = new ArrayList<File>();
-        HashMap<String, HashMap<String, ColumnIdType>> databaseMap = new HashMap<>();
+        HashMap<String, Integer> databaseMap = new HashMap<>();
         HashMap<String, CreateTable> createTableMap = new HashMap<>();
         String workingDir = System.getProperty("user.dir");
         System.out.println(workingDir);
@@ -39,14 +39,10 @@ public class Main {
                             CreateTable ct = (CreateTable)stmt;
                             String tableName = ct.getTable().getName().toLowerCase();
                             List<ColumnDefinition> columnDefinitionList = ct.getColumnDefinitions();
-                            HashMap<String, ColumnIdType> tableMap = new HashMap<>();
                             for (int i = 0; i < columnDefinitionList.size(); i++) {
                                 String colName = columnDefinitionList.get(i).getColumnName().toLowerCase();
-                                ColDataType colDataType = columnDefinitionList.get(i).getColDataType();
-                                ColumnIdType columnIdType = new ColumnIdType(i, colDataType.getDataType());
-                                tableMap.put(colName, columnIdType);
+                                databaseMap.put(tableName + "." +colName, i);
                             }
-                            databaseMap.put(tableName, tableMap);
                             createTableMap.put(tableName, ct);
                         } else if (stmt instanceof Select) {
                             SelectBody selectBody = ((Select)stmt).getSelectBody();
@@ -65,14 +61,14 @@ public class Main {
                                 while(i < plainSelectsList.size()) {
                                     if (i == 0) {
                                         PlainSelect plainSelectStmt = plainSelectsList.get(i);
-                                        SubMain subMain = new SubMain(plainSelectStmt, createTableMap);
+                                        SubMain subMain = new SubMain(plainSelectStmt, createTableMap, databaseMap);
                                         ArrayList<PrimitiveValue[]> plainSelectResult1 = subMain.execute();
                                         tempSchema = subMain.newSchema;
 
                                         i++;
 
                                         plainSelectStmt = plainSelectsList.get(i);
-                                        subMain = new SubMain(plainSelectStmt, createTableMap);
+                                        subMain = new SubMain(plainSelectStmt, createTableMap, databaseMap);
                                         plainSelectResult2 = subMain.execute();
                                         tempSchema2 = subMain.newSchema;
 
@@ -145,7 +141,7 @@ public class Main {
                                         }
                                     }else {
                                         PlainSelect plainSelectStmt = plainSelectsList.get(i);
-                                        SubMain subMain = new SubMain(plainSelectStmt, createTableMap);
+                                        SubMain subMain = new SubMain(plainSelectStmt, createTableMap,databaseMap);
                                         plainSelectResult2 = subMain.execute();
                                         tempSchema2 = subMain.newSchema;
 
@@ -194,7 +190,7 @@ public class Main {
                                 outputTupleList = tempUnion;
                             }else {
                                 PlainSelect plainSelect = (PlainSelect)selectBody;
-                                SubMain subMain = new SubMain(plainSelect, createTableMap);
+                                SubMain subMain = new SubMain(plainSelect, createTableMap, databaseMap);
                                 outputTupleList = subMain.execute();
                             }
 

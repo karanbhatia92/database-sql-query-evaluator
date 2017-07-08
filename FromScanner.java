@@ -20,10 +20,12 @@ public class FromScanner implements FromItemVisitor {
     HashMap<String, Operator> operatorMap;
     HashMap<String, Long> fileSizeMap;
     ArrayList<Column> schemaList;
+    HashMap<String, Integer> databaseMap;
     public Operator source = null;
 
-    public FromScanner(HashMap<String, CreateTable> createTableMap) {
+    public FromScanner(HashMap<String, CreateTable> createTableMap, HashMap<String, Integer> databaseMap) {
         this.createTableMap = createTableMap;
+        this.databaseMap = databaseMap;
         aliasHasMap = new HashMap<>();
         operatorMap = new HashMap<>();
         schemaList = new ArrayList<>();
@@ -48,7 +50,7 @@ public class FromScanner implements FromItemVisitor {
         if(selectBody instanceof PlainSelect){
             PlainSelect plainSelect = (PlainSelect) selectBody;
             SubselectEvaluator subselectEvaluator = new SubselectEvaluator(
-                    plainSelect, createTableMap, alias
+                    plainSelect, createTableMap, alias, databaseMap
             );
             subselectEvaluator.execute();
             tempSchema = subselectEvaluator.schema;
