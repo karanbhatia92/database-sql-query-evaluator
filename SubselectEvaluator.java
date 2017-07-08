@@ -35,8 +35,8 @@ public class SubselectEvaluator implements Operator {
     public void execute(){
         SubMain subMain = new SubMain(plainSelect, createTableMap, databaseMap);
         outputTupleList = subMain.execute();
-        Column[] tempSchema = subMain.schema;
-        Table table = new Table("fromTable");
+        Column[] tempSchema = subMain.newSchema;
+        Table table = new Table("fromtable");
         table.setAlias(alias);
 
         ArrayList<String> columnList = new ArrayList<>();

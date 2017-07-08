@@ -54,11 +54,16 @@ public class FromScanner implements FromItemVisitor {
             );
             subselectEvaluator.execute();
             tempSchema = subselectEvaluator.schema;
+            for(int i = 0; i < tempSchema.length; i++) {
+                databaseMap.put(tempSchema[i].getWholeColumnName(),i);
+            }
             for(int i = 0; i < tempSchema.length; i++){
                 schemaList.add(tempSchema[i]);
             }
             this.createTableMap = subselectEvaluator.createTableMap;
             operatorMap.put("fromtable",subselectEvaluator);
+            fileSizeMap.put("fromtable", (long)0);
+
         }
         else{
             System.out.println("ERROR: FromScanner : Union not handled in subSelect");
