@@ -270,11 +270,24 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
                     }
                 }
             } else {
+
                 Iterator<Expression> iterator = expressionArrayList.iterator();
                 while (iterator.hasNext()){
                     Expression exp = iterator.next();
                     sortedExpList.add(exp);
                     iterator.remove();
+                }
+
+                HashSet<String> crossProductTables = new HashSet<>(operatorMap.keySet());
+                for(String alias : tableHashSet) {
+                    String tableNamewoAlias = aliasHashMap.get(alias);
+                    crossProductTables.remove(tableNamewoAlias);
+                }
+                Iterator<String> iterateTables = crossProductTables.iterator();
+                while(iterateTables.hasNext()) {
+                    String tableName = iterateTables.next();
+                    CrossProduct crossProduct = new CrossProduct(tableName);
+                    sortedExpList.add(crossProduct);
                 }
             }
 
@@ -954,6 +967,68 @@ public class SelectionOperator implements Operator, ExpressionVisitor {
     }
     public void visit(BitwiseXor bitwiseXor) {
         System.out.println("InsideBitwiseXORExpression");
+    }
+    public void visit(CrossProduct crossProduct) {
+//        System.out.println("Inside Cross product!!!!");
+
+        PrimitiveValue[] leftTuple;
+        PrimitiveValue[] rightTuple;
+        PrimitiveValue[] jointTuple;
+        ArrayList<PrimitiveValue[]> tempResult = new ArrayList<>();
+
+        String newTableName = crossProduct.tableName;
+        Operator newOperator = operatorMap.get(newTableName);
+
+        smallJoin = bigJoin;
+        if(!smallJoin.isEmpty()) {
+            int i = 0;
+            Column[] lastJoinSchema = new Column[currentSchema.length];
+            for(int j = 0; j < currentSchema.length; j++) {
+                lastJoinSchema[j] = currentSchema[j];
+            }
+
+            while (i < smallJoin.size()){
+                leftTuple = smallJoin.get(i);
+
+                CreateTable ct2 = createTableMap.get(newTableName);
+
+                List cols2 = ct2.getColumnDefinitions();
+                currentSchema = new Column[lastJoinSchema.length + cols2.size()];
+                for(int j = 0; j < lastJoinSchema.length; j++) {
+                    currentSchema[j] = lastJoinSchema[j];
+                }
+                for(int j = lastJoinSchema.length; j < lastJoinSchema.length + cols2.size(); j++) {
+                    ColumnDefinition col = (ColumnDefinition)cols2.get(j - lastJoinSchema.length);
+                    currentSchema[j] = new Column(new Table(null, newTableName),
+                            col.getColumnName().toLowerCase());
+                }
+                while ((rightTuple = newOperator.readOneTuple()) != null) {
+                    jointTuple = new PrimitiveValue[leftTuple.length + rightTuple.length];
+                    for (int j = 0; j < leftTuple.length; j++) {
+                        jointTuple[j] = leftTuple[j];
+                    }
+                    for(int j = leftTuple.length; j < leftTuple.length + rightTuple.length; j++) {
+                        jointTuple[j] = rightTuple[j - leftTuple.length];
+                    }
+                    tempResult.add(jointTuple);
+                }
+                if(rightTuple == null) {
+                    newOperator.reset();
+                }
+                i++;
+            }
+            bigJoin = tempResult;
+        }
+    }
+}
+
+class CrossProduct implements Expression {
+    String tableName;
+    CrossProduct(String tableName) {
+        this.tableName = tableName;
+    }
+    public void accept(ExpressionVisitor expressionVisitor) {
+        ((SelectionOperator)expressionVisitor).visit(new CrossProduct(tableName));
     }
 }
 

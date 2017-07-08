@@ -9,9 +9,7 @@ import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.select.*;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 
 public class Main {
@@ -50,156 +48,69 @@ public class Main {
                             if(selectBody instanceof Union) {
                                 Union union = (Union)selectBody;
                                 List<PlainSelect> plainSelectsList = union.getPlainSelects();
-                                ArrayList<PrimitiveValue[]> tempUnion = new ArrayList<PrimitiveValue[]>();
+                                HashMap<String, Integer> columnIndex = new HashMap<>();
+                                HashSet<String> unionResult = new HashSet<String>();
                                 Column[] tempSchema = null;
-                                int i = 0;
-                                HashMap<String, PrimitiveValue[]> tempHashMap = new HashMap<String, PrimitiveValue[]>();
-                                Column[] tempSchema2 = null;
-                                ArrayList<PrimitiveValue[]> plainSelectResult2 = null;
-                                HashMap<String, Integer> schemaIndex = new HashMap<>();
 
-                                while(i < plainSelectsList.size()) {
-                                    if (i == 0) {
-                                        PlainSelect plainSelectStmt = plainSelectsList.get(i);
-                                        SubMain subMain = new SubMain(plainSelectStmt, createTableMap, databaseMap);
-                                        ArrayList<PrimitiveValue[]> plainSelectResult1 = subMain.execute();
-                                        tempSchema = subMain.newSchema;
+                                for(int i = 0; i < plainSelectsList.size(); i++) {
+                                    PlainSelect plainSelectStmt = plainSelectsList.get(i);
+                                    SubMain subMain = new SubMain(plainSelectStmt, createTableMap, databaseMap);
+                                    ArrayList<PrimitiveValue[]> plainSelectResult = subMain.execute();        //Memory Wastage
+                                    Column[] selectSchema = subMain.newSchema;
 
-                                        i++;
-
-                                        plainSelectStmt = plainSelectsList.get(i);
-                                        subMain = new SubMain(plainSelectStmt, createTableMap, databaseMap);
-                                        plainSelectResult2 = subMain.execute();
-                                        tempSchema2 = subMain.newSchema;
-
-                                        i++;
-
-                                        if(tempSchema == null && tempSchema2 != null){
-                                            tempSchema = tempSchema2;
+                                    if(selectSchema != null) {
+                                        if(tempSchema == null) {
+                                            tempSchema = selectSchema;
                                             for(int j = 0; j < tempSchema.length; j++) {
-                                                schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
+                                                columnIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
                                             }
-                                            for (int j = 0; j < plainSelectResult2.size(); j++) {
+                                            Iterator<PrimitiveValue[]> iterator = plainSelectResult.iterator();
+                                            while(iterator.hasNext()) {
+                                                PrimitiveValue[] value = iterator.next();
                                                 String key = "";
-                                                PrimitiveValue[] value = plainSelectResult2.get(j);
                                                 for(int k = 0; k < tempSchema.length; k++) {
-                                                    key = key + value[k].toString();
+                                                    key = key + value[k].toString() + " | ";
                                                 }
-                                                if (tempHashMap.get(key) == null) {
-                                                    tempUnion.add(value);
-                                                    tempHashMap.put(key, value);
+                                                if(unionResult.add(key)) {
+                                                    System.out.println(key);
                                                 }
+                                                iterator.remove();
                                             }
-
-                                        }else if(tempSchema != null && tempSchema2 == null) {
-                                            for(int j = 0; j < tempSchema.length; j++) {
-                                                schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
-                                            }
-                                            for (int j = 0; j < plainSelectResult1.size(); j++) {
-                                                String key = "";
-                                                PrimitiveValue[] value = plainSelectResult1.get(j);
-                                                for(int k = 0; k < tempSchema.length; k++) {
-                                                    key = key + value[k].toString();
-                                                }
-                                                if (tempHashMap.get(key) == null) {
-                                                    tempUnion.add(value);
-                                                    tempHashMap.put(key, value);
-                                                }
-                                            }
-                                        }else if(tempSchema != null && tempSchema2 != null){
-                                            assert tempSchema.length==tempSchema2.length : "Union: schema1 length does not match schema2 length";
-                                            for(int j = 0; j < tempSchema.length; j++) {
-                                                schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
-                                            }
-                                            for (int j = 0; j < plainSelectResult1.size(); j++) {
-                                                String key = "";
-                                                PrimitiveValue[] value = plainSelectResult1.get(j);
-                                                for(int k = 0; k < tempSchema.length; k++) {
-                                                    key = key + value[k].toString();
-                                                }
-                                                if (tempHashMap.get(key) == null) {
-                                                    tempUnion.add(value);
-                                                    tempHashMap.put(key, value);
-                                                }
-                                            }
+                                        }else {
                                             ArrayList<Integer> indexOrder = new ArrayList<Integer>();
-                                            for(int j = 0; j < tempSchema2.length; j++) {
-                                                indexOrder.add(schemaIndex.get(tempSchema2[j].getWholeColumnName().toLowerCase()));
+                                            for(int j = 0; j < tempSchema.length; j++) {
+                                                indexOrder.add(columnIndex.get(selectSchema[j].getWholeColumnName().toLowerCase()));
                                             }
-
-                                            for(int j = 0 ; j < plainSelectResult2.size(); j++) {
-                                                PrimitiveValue[] value = plainSelectResult2.get(j);
+                                            Iterator<PrimitiveValue[]> iterator = plainSelectResult.iterator();
+                                            while(iterator.hasNext()) {
+                                                PrimitiveValue[] value = iterator.next();
                                                 String key = "";
-                                                for(int k = 0; k < tempSchema2.length; k++) {
-                                                    key = key + value[indexOrder.get(k)].toString();
+                                                for(int k = 0; k < tempSchema.length; k++) {
+                                                    key = key + value[indexOrder.get(k)].toString() + " | ";
                                                 }
-                                                if (tempHashMap.get(key) == null) {
-                                                    tempHashMap.put(key, value);
-                                                    tempUnion.add(value);
+                                                if(unionResult.add(key)) {
+                                                    System.out.println(key);
                                                 }
+                                                iterator.remove();
                                             }
                                         }
-                                    }else {
-                                        PlainSelect plainSelectStmt = plainSelectsList.get(i);
-                                        SubMain subMain = new SubMain(plainSelectStmt, createTableMap,databaseMap);
-                                        plainSelectResult2 = subMain.execute();
-                                        tempSchema2 = subMain.newSchema;
-
-                                        i++;
-                                        if(tempSchema == null && tempSchema2 != null) {
-
-                                            tempSchema = tempSchema2;
-                                            if(schemaIndex.isEmpty()){
-                                                for(int j = 0; j < tempSchema.length; j++) {
-                                                    schemaIndex.put(tempSchema[j].getWholeColumnName().toLowerCase(), j);
-                                                }
-                                            }
-                                            for (int j = 0; j < plainSelectResult2.size(); j++) {
-                                                String key = "";
-                                                PrimitiveValue[] value = plainSelectResult2.get(j);
-                                                for(int k = 0; k < tempSchema.length; k++) {
-                                                    key = key + value[k].toString();
-                                                }
-                                                if (tempHashMap.get(key) == null) {
-                                                    tempUnion.add(value);
-                                                    tempHashMap.put(key, value);
-                                                }
-                                            }
-                                        }else if(tempSchema != null && tempSchema2 != null){
-                                            assert tempSchema.length==tempSchema2.length : "Union: schema1 length does not match schema2 length";
-                                            ArrayList<Integer> indexOrder = new ArrayList<Integer>();
-                                            for(int j = 0; j < tempSchema2.length; j++) {
-                                                indexOrder.add(schemaIndex.get(tempSchema2[j].getWholeColumnName().toLowerCase()));
-                                            }
-
-                                            for(int j = 0 ; j < plainSelectResult2.size(); j++) {
-                                                PrimitiveValue[] value = plainSelectResult2.get(j);
-                                                String key = "";
-                                                for(int k = 0; k < tempSchema2.length; k++) {
-                                                    key = key + value[indexOrder.get(k)].toString();
-                                                }
-                                                if (tempHashMap.get(key) == null) {
-                                                    tempHashMap.put(key, value);
-                                                    tempUnion.add(value);
-                                                }
-                                            }
-                                        }
-
                                     }
                                 }
-                                outputTupleList = tempUnion;
+                                if(unionResult.isEmpty()) {
+                                    System.out.println("NULL");
+                                }
                             }else {
                                 PlainSelect plainSelect = (PlainSelect)selectBody;
                                 SubMain subMain = new SubMain(plainSelect, createTableMap, databaseMap);
                                 outputTupleList = subMain.execute();
-                            }
 
-                            for(int i = 0; i < outputTupleList.size(); i++){
-                                PrimitiveValue[] pv = outputTupleList.get(i);
-                                for(int j = 0; j < pv.length; j++){
-                                    System.out.print(pv[j] + "|" );
+                                for(int i = 0; i < outputTupleList.size(); i++){
+                                    PrimitiveValue[] pv = outputTupleList.get(i);
+                                    for(int j = 0; j < pv.length; j++){
+                                        System.out.print(pv[j] + "|" );
+                                    }
+                                    System.out.println();
                                 }
-                                System.out.println();
                             }
                             System.out.println("---------------------------------------------------");
                             System.out.println();
