@@ -49,6 +49,7 @@ public class SubMain {
         operatorMap = fromscan.operatorMap;
         schema = new Column[fromscan.schemaList.size()];
         schema = fromscan.schemaList.toArray(schema);
+        Column[] projectedSchema = new Column[fromscan.schemaList.size()+1];
         createTableMap = fromscan.createTableMap;
         if(plainSelect.getWhere() != null) {
             oper = new SelectionOperator(
@@ -84,40 +85,68 @@ public class SubMain {
                 tuple = oper.readOneTuple();
             }
         }
+        // get projection condition
+        Boolean projectionFlag = false;
+        ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>) plainSelect.getSelectItems();
+        for(SelectItem selectItem : selectItems){
+            if(selectItem instanceof SelectExpressionItem){
+                Expression expression = ((SelectExpressionItem) selectItem).getExpression();
+                if(expression instanceof Function){
+                    projectionFlag = true;
+                }
+            }
+        }
+        if(projectionFlag && (plainSelect.getHaving()!=null)){
+            //Projection
+            List<SelectItem> selectItemList = plainSelect.getSelectItems();
+            ProjectionOperator projectionOperator = new ProjectionOperator(
+                    outputTupleList, selectItemList, schema, aliasHashMap,
+                    projectionFlag, plainSelect, groupByMap
+            );
+            outputTupleList = projectionOperator.getProjectedOutput();
+            groupByMap = projectionOperator.groupByMap;
+            projectedSchema = projectionOperator.projectionSchema;
+            newSchema = projectionOperator.newSchema;
 
-        //Check for aggregate condition in SELECT
-
-
-        // Having
-        if(plainSelect.getHaving()!=null){
+            // Having
             Expression condition = plainSelect.getHaving();
-            HavingOperator havingOperator = new HavingOperator(condition, groupByMap, aliasHashMap, schema);
+            HavingOperator havingOperator = new HavingOperator(condition, groupByMap, aliasHashMap,
+                    projectedSchema, plainSelect, projectionFlag, outputTupleList);
             havingOperator.filterGroupedEle();
             outputTupleList = havingOperator.getHavingOutput();
-            groupByMap = havingOperator.getMap();
-        }
 
-        Boolean projectionFlag = true;
-        //Order By
-        if(plainSelect.getOrderByElements()!=null){
-            List<OrderByElement> orderByList = plainSelect.getOrderByElements();
-            OrderByOperator orderByOperator = new OrderByOperator(
-                    groupByMap, aliasHashMap, schema, plainSelect, outputTupleList
+        }
+        else{
+            // Having
+            if(plainSelect.getHaving()!=null){
+                Expression condition = plainSelect.getHaving();
+                HavingOperator havingOperator = new HavingOperator(condition, groupByMap, aliasHashMap,
+                                                    schema, plainSelect, projectionFlag,outputTupleList);
+                havingOperator.filterGroupedEle();
+                outputTupleList = havingOperator.getHavingOutput();
+                groupByMap = havingOperator.getMap();
+            }
+            //Order By
+            if(plainSelect.getOrderByElements()!=null){
+                List<OrderByElement> orderByList = plainSelect.getOrderByElements();
+                OrderByOperator orderByOperator = new OrderByOperator(
+                        groupByMap, aliasHashMap, schema, plainSelect, outputTupleList
+                );
+                orderByOperator.orderTuples(orderByList);
+                outputTupleList = orderByOperator.getOrderByOutput();
+                groupByMap = orderByOperator.groupByMap;
+            }
+            //Projection
+            List<SelectItem> selectItemList = plainSelect.getSelectItems();
+            ProjectionOperator projectionOperator = new ProjectionOperator(
+                    outputTupleList, selectItemList, schema, aliasHashMap,
+                    projectionFlag, plainSelect, groupByMap
             );
-            orderByOperator.orderTuples(orderByList);
-            outputTupleList = orderByOperator.getOrderByOutput();
-            projectionFlag = orderByOperator.projectionFlag;
-            groupByMap = orderByOperator.groupByMap;
+            outputTupleList = projectionOperator.getProjectedOutput();
+            newSchema = projectionOperator.newSchema;
         }
 
-        //Projection
-        List<SelectItem> selectItemList = plainSelect.getSelectItems();
-        ProjectionOperator projectionOperator = new ProjectionOperator(
-                outputTupleList, selectItemList, schema, aliasHashMap,
-                projectionFlag, plainSelect, groupByMap
-        );
-        outputTupleList = projectionOperator.getProjectedOutput();
-        newSchema = projectionOperator.newSchema;
+        //Distinct
         Distinct distinct = plainSelect.getDistinct();
         if(distinct != null){
             DistinctOperator distinctOperator = new DistinctOperator(outputTupleList);
@@ -128,6 +157,7 @@ public class SubMain {
             long limit = plainSelect.getLimit().getRowCount();
 
         }
+
         return outputTupleList;
     }
 }

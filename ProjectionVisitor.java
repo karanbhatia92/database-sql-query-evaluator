@@ -1,5 +1,6 @@
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.PrimitiveValue;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.*;
@@ -57,8 +58,9 @@ public class ProjectionVisitor implements SelectItemVisitor {
     public void visit(SelectExpressionItem selectExpressionItem) {
         String tableName;
         String projectionAliasName = "";
+        Expression orderByExp = null;
         Expression expression = selectExpressionItem.getExpression();
-        Expression orderByExp = plainSelect.getOrderByElements().get(0).getExpression();
+
         if(expression instanceof Column) {
             Column column = (Column)expression;
             if(column.getTable().getName() != null) {
@@ -87,19 +89,24 @@ public class ProjectionVisitor implements SelectItemVisitor {
 
         }
         else if(expression instanceof Function){
-            if(!(projectionFlag)){ // !projectionFlag indicates aggregation operation in select
+            if(projectionFlag){
+                Boolean isAsc = false;
+                if(plainSelect.getOrderByElements()!=null){
+                    isAsc = plainSelect.getOrderByElements().get(0).isAsc();
+                    orderByExp = plainSelect.getOrderByElements().get(0).getExpression();
+                }
                 Function function = (Function) expression;
                 String orderExpName = "";
-                Boolean isAsc = false;
                 if(selectExpressionItem.getAlias()!=null){
                     projectionAliasName = selectExpressionItem.getAlias();
                     if(orderByExp instanceof Column){
                         orderExpName = ((Column) orderByExp).getColumnName();
                         if(orderExpName.equals(projectionAliasName)){
                             OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap,
-                                    aliasHashMap, schema, tupleList, isAsc);
+                                    aliasHashMap, schema, tupleList, isAsc, projectionAliasName);
                             projectionVisitorOutList = orderEvaluator.execute();
                             projectionSchema = orderEvaluator.projectionSchema;
+                            groupByMap = orderEvaluator.groupByMap;
                             columnIndexes.add(projectionSchema.length - 1);
                         }
                     }
