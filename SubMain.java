@@ -166,6 +166,12 @@ public class SubMain {
                 orderByOperator.orderTuples(orderByList);
                 outputTupleList = orderByOperator.getOrderByOutput();
                 groupByMap = orderByOperator.groupByMap;
+                HashSet<String> temp = orderByOperator.orderObject;
+                if(!temp.isEmpty()){
+                    for(String str : temp){
+                        orderObject.add(str);
+                    }
+                }
             }
             //Projection
             List<SelectItem> selectItemList = plainSelect.getSelectItems();
@@ -177,12 +183,13 @@ public class SubMain {
             newSchema = projectionOperator.newSchema;
             projectionObjects = projectionOperator.projectionObjects;
             HashSet<String> tempOrder = projectionOperator.orderObject;
-            for(String str : tempOrder){
-                if(!orderObject.contains(str)){
-                    orderObject.add(str);
+            if(!tempOrder.isEmpty()){
+                for(String str : tempOrder){
+                    if(!orderObject.contains(str)){
+                        orderObject.add(str);
+                    }
                 }
             }
-
         }
 
         //Distinct

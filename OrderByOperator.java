@@ -23,6 +23,7 @@ public class OrderByOperator {
     PlainSelect plainSelect;
     String groupByColumnName;
     String orderByColumnName;
+    HashSet<String> orderObject;
 
     public OrderByOperator(
             HashMap<PrimitiveValue,ArrayList<PrimitiveValue[]>> groupByMap,
@@ -39,6 +40,7 @@ public class OrderByOperator {
         orderByOutput = new ArrayList<>();
         groupByColumnName = "";
         orderByColumnName = "";
+        orderObject = new HashSet<>();
     }
 
     public void orderTuples(List<OrderByElement> orderByList){
@@ -52,6 +54,9 @@ public class OrderByOperator {
             Column column = (Column)orderByExp;
             orderByColumnName = column.getColumnName().toLowerCase();
             if(column.getTable().getName() != null) {
+                if(!orderObject.contains(column.getWholeColumnName())){
+                    orderObject.add(column.getWholeColumnName());
+                }
                 aliasName = column.getTable().getName().toLowerCase();
                 if(aliasHashMap.containsKey(aliasName)){
                     tableName = aliasHashMap.get(aliasName);
@@ -70,6 +75,9 @@ public class OrderByOperator {
             } else {
                 for(int i = 0; i < schema.length; i++) {
                     if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
+                        if(!orderObject.contains(column.getWholeColumnName())){
+                            orderObject.add(column.getWholeColumnName());
+                        }
                         columnIndexOrder = i;
                         break;
                     }

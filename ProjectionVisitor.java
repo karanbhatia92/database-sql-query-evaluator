@@ -131,8 +131,8 @@ public class ProjectionVisitor implements SelectItemVisitor {
                     projectionAliasName = selectExpressionItem.getAlias();
                     if(orderByExp instanceof Column){
                         orderExpName = ((Column) orderByExp).getColumnName();
-                        if(!orderObject.contains(orderExpName)){
-                            orderObject.add(orderExpName);
+                        if(!orderObject.contains(expression.toString())){
+                            orderObject.add(expression.toString());
                         }
                         if(orderExpName.equals(projectionAliasName)){
                             OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap,
