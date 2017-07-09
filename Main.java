@@ -28,6 +28,8 @@ public class Main {
         HashSet<String> projectionObjects = new HashSet<>();
         HashSet<String> groupObject = new HashSet<>();
         HashSet<String> orderObject = new HashSet<>();
+        HashSet<String> whereObjects = new HashSet<>();
+        HashSet<String> joinObjects = new HashSet<>();
 
         for (File child : directoryListing) {
             if (child.isFile() && child.getName().endsWith(".sql")) {
@@ -67,6 +69,8 @@ public class Main {
         							HashSet<String> tempprojectionObjects = subMain.projectionObjects;
         							HashSet<String> tempgroupObject = subMain.groupObject;
         							HashSet<String> temporderObject = subMain.orderObject;
+        							HashSet<String> tempwhereObjects = subMain.whereObjects;
+        							HashSet<String> tempjoinObjects = subMain.joinObjects;
 
         							if(!tempprojectionObjects.isEmpty()){
             							Iterator<String> iterator = tempprojectionObjects.iterator();
@@ -95,6 +99,20 @@ public class Main {
                 							orderObject.add(iterator.next());
             							}
         							}
+
+                                    if(!tempwhereObjects.isEmpty()){
+                                        Iterator<String> iterator = tempwhereObjects.iterator();
+                                        while(iterator.hasNext()){
+                                            whereObjects.add(iterator.next());
+                                        }
+                                    }
+
+                                    if(!tempjoinObjects.isEmpty()){
+                                        Iterator<String> iterator = tempjoinObjects.iterator();
+                                        while(iterator.hasNext()){
+                                            joinObjects.add(iterator.next());
+                                        }
+                                    }
 
                                     if(selectSchema != null) {
                                         if(tempSchema == null) {
@@ -152,10 +170,12 @@ public class Main {
                                 projectionObjects = subMain.projectionObjects;
                                 groupObject = subMain.groupObject;
                                 orderObject = subMain.orderObject;
+                                whereObjects = subMain.whereObjects;
+                                joinObjects = subMain.joinObjects;
 
                             }
                             printQuery(stmt, outputTupleList, projectionObjects,
-                                    groupObject, orderObject, fromObjects);
+                                    groupObject, orderObject, fromObjects, whereObjects, joinObjects);
                             System.out.println("---------------------------------------------------");
                             System.out.println();
                         } else {
@@ -172,7 +192,7 @@ public class Main {
     }
 
     public static void printQuery(Statement stmt, ArrayList outputTupleList, HashSet projectionObjects,
-                                    HashSet groupObject, HashSet orderObject, HashSet fromObjects){
+                                    HashSet groupObject, HashSet orderObject, HashSet fromObjects, HashSet whereObjects, HashSet joinObjects){
 
         System.out.println(stmt);
 
@@ -201,6 +221,18 @@ public class Main {
         }
         //SELECTION and JOIN
 
+        if(!joinObjects.isEmpty()){
+            Iterator<String> iterator = joinObjects.iterator();
+            System.out.print("JOIN: " );
+            while(iterator.hasNext()){
+                System.out.print(" " + iterator.next() + " ");
+            }
+            System.out.println();
+        }
+        else{
+            System.out.println("JOIN: NULL");
+        }
+
         if(!groupObject.isEmpty()){
             Iterator<String> iterator = groupObject.iterator();
             System.out.print("GROUP-BY: " );
@@ -223,6 +255,18 @@ public class Main {
         }
         else{
             System.out.println("ORDER-BY: NULL");
+        }
+
+        if(!whereObjects.isEmpty()){
+            Iterator<String> iterator = whereObjects.iterator();
+            System.out.print("SELECTION: " );
+            while(iterator.hasNext()){
+                System.out.print(" " + iterator.next() + " ");
+            }
+            System.out.println();
+        }
+        else{
+            System.out.println("SELECTION: NULL");
         }
 
         for(int i = 0; i < outputTupleList.size(); i++){

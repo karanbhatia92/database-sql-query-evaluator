@@ -26,6 +26,8 @@ public class SubMain {
     HashSet<String> projectionObjects;
     HashSet<String> groupObject;
     HashSet<String> orderObject;
+    HashSet<String> whereObjects;
+    HashSet<String> joinObjects;
 
     public SubMain(PlainSelect plainSelect, HashMap createTableMap, HashMap<String, Integer> databaseMap){
         this.plainSelect = plainSelect;
@@ -64,6 +66,10 @@ public class SubMain {
         fromObjects = fromscan.fromObjects;
         orderObject = fromscan.orderObject;
 
+        ExpressionFinder expressionFinder = new ExpressionFinder(fromObjects, aliasHashMap);
+        whereObjects = expressionFinder.solve(plainSelect.getWhere());
+        joinObjects = expressionFinder.joinprint;
+
         schema = new Column[fromscan.schemaList.size()];
         schema = fromscan.schemaList.toArray(schema);
         Column[] projectedSchema = new Column[fromscan.schemaList.size()+1];
@@ -89,7 +95,15 @@ public class SubMain {
         if(plainSelect.getGroupByColumnReferences()!=null){
             List<Column> groupByColumns = plainSelect.getGroupByColumnReferences();
             if(!groupObject.contains(groupByColumns.get(0).getWholeColumnName())){
-                groupObject.add(groupByColumns.get(0).getWholeColumnName());
+
+                if(groupByColumns.get(0).getTable().getName()!=null){
+                    String c = groupByColumns.get(0).getColumnName();
+                    String a = groupByColumns.get(0).getTable().getName().toLowerCase();
+                    String t = aliasHashMap.get(a);
+                    String m = t + "." + c;
+                    groupObject.add(m);
+
+                }
             }
 
             PrimitiveValue[] tuple = oper.readOneTuple();

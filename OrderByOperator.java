@@ -3,11 +3,9 @@ import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.PrimitiveValue;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
-import net.sf.jsqlparser.statement.select.OrderByElement;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SelectItem;
+import net.sf.jsqlparser.statement.select.*;
 
 import java.util.*;
 
@@ -62,7 +60,11 @@ public class OrderByOperator {
             orderByColumnName = column.getColumnName().toLowerCase();
             if(column.getTable().getName() != null) {
                 if(!orderObject.contains(column.getWholeColumnName())){
-                    orderObject.add(column.getWholeColumnName());
+                    String c = column.getColumnName();
+                    String a = column.getTable().getName().toLowerCase();
+                    String t = aliasHashMap.get(a);
+                    String m = t + "." + c;
+                    orderObject.add(m);
                 }
                 aliasName = column.getTable().getName().toLowerCase();
                 if(aliasHashMap.containsKey(aliasName)){
@@ -83,7 +85,14 @@ public class OrderByOperator {
                 for(int i = 0; i < schema.length; i++) {
                     if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                         if(!orderObject.contains(column.getWholeColumnName())){
-                            orderObject.add(column.getWholeColumnName());
+                            String c = column.getColumnName();
+                            FromItem fromItem = plainSelect.getFromItem();
+                            String t = "";
+                            if(fromItem instanceof Table){
+                                t = ((Table) fromItem).getName();
+                            }
+                            String m = t + "." + c;
+                            orderObject.add(m);
                         }
                         columnIndexOrder = i;
                         break;

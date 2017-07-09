@@ -60,7 +60,12 @@ public class ProjectionVisitor implements SelectItemVisitor {
                 //CHECK diff betwn column name and whole column name
                 if(column.getTable().getWholeTableName().toLowerCase().equals(tableName)){
                     if(!projectionObjects.contains(column.getWholeColumnName())){
-                        projectionObjects.add(column.getWholeColumnName());
+                        if(!projectionObjects.contains(column.getWholeColumnName())){
+                            String c = column.getColumnName();
+                            String t = ((Table) fromItem).getWholeTableName();
+                            String m = t + "." + c;
+                            projectionObjects.add(m);
+                        }
                     }
                 }
             }
@@ -77,7 +82,10 @@ public class ProjectionVisitor implements SelectItemVisitor {
                 if(schema[i].getTable().getWholeTableName().toLowerCase().equals(tableName)){
                     columnIndexes.add(i);
                     if(!projectionObjects.contains(schema[i].getWholeColumnName())){
-                        projectionObjects.add(schema[i].getWholeColumnName());
+                        String c = schema[i].getColumnName();
+                        //String a = schema[i].getWholeColumnName();
+                        String m = tableName + "." + c;
+                        projectionObjects.add(m);
                     }
                 }
             }
@@ -100,7 +108,9 @@ public class ProjectionVisitor implements SelectItemVisitor {
                             if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                                 columnIndexes.add(i);
                                 if(!projectionObjects.contains(schema[i].getWholeColumnName())){
-                                    projectionObjects.add(schema[i].getWholeColumnName());
+                                    String c = schema[i].getColumnName();
+                                    String m = tableName + "." + c;
+                                    projectionObjects.add(m);
                                 }
                                 break;
                             }
@@ -114,7 +124,14 @@ public class ProjectionVisitor implements SelectItemVisitor {
                     if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
                         columnIndexes.add(i);
                         if(!projectionObjects.contains(schema[i].getColumnName())){
-                            projectionObjects.add(schema[i].getColumnName());
+                            String c = schema[i].getColumnName();
+                            FromItem fromItem = plainSelect.getFromItem();
+                            String t = "";
+                            if(fromItem instanceof Table){
+                                t = ((Table) fromItem).getWholeTableName();
+                            }
+                            String m = t + "." + c;
+                            projectionObjects.add(m);
                         }
                         break;
                     }

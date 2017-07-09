@@ -64,7 +64,7 @@ public class OrderEvaluator {
             ArrayList arraylist = groupByMap.get(key);
             if(!allColumns){
                 Double count = 0.0, sum = 0.0, min = Double.MAX_VALUE, max = Double.MIN_VALUE;
-                for(int i = 1; i < arraylist.size(); i++){
+                for(int i = 0; i < arraylist.size(); i++){
                     Evaluator evaluator = new Evaluator();
                     evaluator.setVariables(((PrimitiveValue[]) arraylist.get(i)), schema,
                             aliasHashMap, createTableMap, databaseMap);
@@ -78,6 +78,7 @@ public class OrderEvaluator {
                             if(result.toDouble() > max){
                                 max = result.toDouble();
                             }
+                            count = count + 1;
 
                         if(result instanceof LongValue){
 
