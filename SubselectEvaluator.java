@@ -24,6 +24,10 @@ public class SubselectEvaluator implements Operator {
     HashSet<String> fromObjects;
     HashSet<String> groupObject;
     HashSet<String> orderObject;
+    HashSet<String> projectionObjects;
+    HashSet<String> whereObjects;
+    HashSet<String> joinObjects;
+    HashMap<String, String> fromTableMap;
 
     public SubselectEvaluator(PlainSelect plainSelect, HashMap createTableMap,
                               String alias, HashMap<String, Integer> databaseMap){
@@ -37,6 +41,10 @@ public class SubselectEvaluator implements Operator {
         fromObjects = new HashSet<>();
         groupObject = new HashSet<>();
         orderObject = new HashSet<>();
+        fromTableMap = new HashMap<>();
+        projectionObjects = new HashSet<>();
+        whereObjects = new HashSet<>();
+        joinObjects = new HashSet<>();
     }
 
     public void execute(){
@@ -51,6 +59,9 @@ public class SubselectEvaluator implements Operator {
         if(orderObject != null){
             orderObject = subMain.orderObject;
         }
+        projectionObjects = subMain.projectionObjects;
+        whereObjects = subMain.whereObjects;
+        joinObjects = subMain.joinObjects;
         Column[] tempSchema = subMain.newSchema;
         Table table = new Table("fromtable");
         table.setAlias(alias);
@@ -58,7 +69,9 @@ public class SubselectEvaluator implements Operator {
         ArrayList<String> columnList = new ArrayList<>();
         ArrayList<ColumnDefinition> columnDefinitions = new ArrayList<>();
         for(int i = 0; i < tempSchema.length; i++){
-
+            String key = "fromtable." + tempSchema[i].getColumnName();
+            String value = tempSchema[i].getWholeColumnName().toLowerCase();
+            fromTableMap.put(key, value);
             String tableName = tempSchema[i].getTable().getWholeTableName().toLowerCase();
             CreateTable createTable = createTableMap.get(tableName);
             ArrayList<ColumnDefinition> tempColumnDefinition = (ArrayList<ColumnDefinition>) createTable.getColumnDefinitions();

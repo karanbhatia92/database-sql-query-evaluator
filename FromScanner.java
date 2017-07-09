@@ -26,6 +26,10 @@ public class FromScanner implements FromItemVisitor {
     HashSet<String> fromObjects;
     HashSet<String> groupObject;
     HashSet<String> orderObject;
+    HashSet<String> whereObjects;
+    HashSet<String> joinObjects;
+    HashSet<String> projectionObjects;
+    HashMap<String, String> fromTableMap;
 
     public FromScanner(HashMap<String, CreateTable> createTableMap, HashMap<String, Integer> databaseMap) {
         this.createTableMap = createTableMap;
@@ -37,6 +41,9 @@ public class FromScanner implements FromItemVisitor {
         fromObjects = new HashSet<>();
         groupObject = new HashSet<>();
         orderObject = new HashSet<>();
+        whereObjects = new HashSet<>();
+        joinObjects = new HashSet<>();
+        projectionObjects = new HashSet<>();
     }
     public void visit(SubJoin subjoin) {
 
@@ -44,6 +51,7 @@ public class FromScanner implements FromItemVisitor {
 
     public void visit(SubSelect subSelect) {
         String alias = "";
+        fromTableMap = new HashMap<>();
         Column[] tempSchema;
         if(subSelect.getAlias()!=null){
             alias = subSelect.getAlias().toLowerCase();
@@ -68,6 +76,7 @@ public class FromScanner implements FromItemVisitor {
                 schemaList.add(tempSchema[i]);
             }
             this.createTableMap = subselectEvaluator.createTableMap;
+            fromTableMap = subselectEvaluator.fromTableMap;
             operatorMap.put("fromtable",subselectEvaluator);
             fileSizeMap.put("fromtable", (long)0);
             HashSet<String> tempfromObjects = subselectEvaluator.fromObjects;
@@ -84,6 +93,9 @@ public class FromScanner implements FromItemVisitor {
             if(orderObject != null){
                 orderObject = subselectEvaluator.orderObject;
             }
+            whereObjects = subselectEvaluator.whereObjects;
+            joinObjects = subselectEvaluator.joinObjects;
+            projectionObjects = subselectEvaluator.projectionObjects;
         }
         else{
             System.out.println("ERROR: FromScanner : Union not handled in subSelect");

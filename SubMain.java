@@ -8,10 +8,7 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.select.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by Mugdha on 7/3/2017.
@@ -28,6 +25,7 @@ public class SubMain {
     HashSet<String> orderObject;
     HashSet<String> whereObjects;
     HashSet<String> joinObjects;
+    HashMap<String, String> fromTableMap;
 
     public SubMain(PlainSelect plainSelect, HashMap createTableMap, HashMap<String, Integer> databaseMap){
         this.plainSelect = plainSelect;
@@ -37,6 +35,7 @@ public class SubMain {
         fromObjects = new HashSet<>();
         groupObject = new HashSet<>();
         orderObject = new HashSet<>();
+        fromTableMap = new HashMap<>();
     }
     public ArrayList execute(){
 
@@ -47,6 +46,7 @@ public class SubMain {
         HashMap<String, Operator> operatorMap;
         List<Join> joinList;
         Operator oper = null;
+
 
         FromScanner fromscan = new FromScanner(createTableMap, databaseMap);
         plainSelect.getFromItem().accept(fromscan);
@@ -65,11 +65,67 @@ public class SubMain {
         groupObject = fromscan.groupObject;
         fromObjects = fromscan.fromObjects;
         orderObject = fromscan.orderObject;
+        fromTableMap = fromscan.fromTableMap;
 
+        whereObjects = fromscan.whereObjects;
+        joinObjects = fromscan.joinObjects;
+        projectionObjects = fromscan.projectionObjects;
+
+
+        HashSet<String> tempOrder1 = new HashSet<>(whereObjects);
         ExpressionFinder expressionFinder = new ExpressionFinder(fromObjects, aliasHashMap);
         whereObjects = expressionFinder.solve(plainSelect.getWhere());
+
+        if(!tempOrder1.isEmpty()){
+            for(String str : tempOrder1){
+                whereObjects.add(str);
+            }
+        }
+
+        HashSet<String> tempOrder2 = new HashSet<>(joinObjects);
         joinObjects = expressionFinder.joinprint;
 
+        if(!tempOrder2.isEmpty()){
+            for(String str : tempOrder2){
+                joinObjects.add(str);
+            }
+        }
+
+        ArrayList<String> addjoins = new ArrayList<>();
+        Iterator<String> iterator1 = joinObjects.iterator();
+        while (iterator1.hasNext()) {
+            String join = iterator1.next();
+            String actualColumn = null;
+            if(join.contains("fromtable")) {
+                if(fromTableMap.containsKey(join)) {
+                    actualColumn = fromTableMap.get(join);
+                    addjoins.add(actualColumn);
+                    iterator1.remove();
+                }
+            }
+        }
+
+        for(String joins : addjoins) {
+            joinObjects.add(joins);
+        }
+
+        ArrayList<String> addwhere = new ArrayList<>();
+        Iterator<String> iterator2 = whereObjects.iterator();
+        while (iterator2.hasNext()) {
+            String where = iterator2.next();
+            String actualColumn = null;
+            if(where.contains("fromtable")) {
+                if(fromTableMap.containsKey(where)) {
+                    actualColumn = fromTableMap.get(where);
+                    addwhere.add(actualColumn);
+                    iterator2.remove();
+                }
+            }
+        }
+
+        for(String wheres : addwhere) {
+            whereObjects.add(wheres);
+        }
         schema = new Column[fromscan.schemaList.size()];
         schema = fromscan.schemaList.toArray(schema);
         Column[] projectedSchema = new Column[fromscan.schemaList.size()+1];
@@ -144,6 +200,7 @@ public class SubMain {
             groupByMap = projectionOperator.groupByMap;
             newSchema = projectionOperator.newSchema;
             projectionObjects = projectionOperator.projectionObjects;
+
             HashSet<String> tempOrder = projectionOperator.orderObject;
             if(!tempOrder.isEmpty()){
                 for(String str : tempOrder){
@@ -205,6 +262,24 @@ public class SubMain {
                     }
                 }
             }
+        }
+        ArrayList<String> addObjects = new ArrayList<>();
+
+        Iterator<String> iter = projectionObjects.iterator();
+        while (iter.hasNext()) {
+            String project = iter.next();
+            String actualColumn = null;
+            if(project.contains("fromtable")) {
+                if(fromTableMap.containsKey(project)) {
+                    actualColumn = fromTableMap.get(project);
+                    addObjects.add(actualColumn);
+                    iter.remove();
+                }
+            }
+        }
+
+        for(String vals : addObjects) {
+            projectionObjects.add(vals);
         }
 
         //Distinct

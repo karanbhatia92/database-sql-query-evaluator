@@ -23,6 +23,7 @@ public class Main {
         System.out.println(workingDir);
         File dir = new File(workingDir);
         File[] directoryListing = dir.listFiles();
+/*
         ArrayList<PrimitiveValue[]> outputTupleList = null;
         HashSet<String> fromObjects = new HashSet<>();
         HashSet<String> projectionObjects = new HashSet<>();
@@ -30,6 +31,7 @@ public class Main {
         HashSet<String> orderObject = new HashSet<>();
         HashSet<String> whereObjects = new HashSet<>();
         HashSet<String> joinObjects = new HashSet<>();
+*/
 
         for (File child : directoryListing) {
             if (child.isFile() && child.getName().endsWith(".sql")) {
@@ -49,6 +51,13 @@ public class Main {
                             }
                             createTableMap.put(tableName, ct);
                         } else if (stmt instanceof Select) {
+                            ArrayList<PrimitiveValue[]> outputTupleList = null;
+                            HashSet<String> fromObjects = new HashSet<>();
+                            HashSet<String> projectionObjects = new HashSet<>();
+                            HashSet<String> groupObject = new HashSet<>();
+                            HashSet<String> orderObject = new HashSet<>();
+                            HashSet<String> whereObjects = new HashSet<>();
+                            HashSet<String> joinObjects = new HashSet<>();
                             SelectBody selectBody = ((Select)stmt).getSelectBody();
 
                             if(selectBody instanceof Union) {
