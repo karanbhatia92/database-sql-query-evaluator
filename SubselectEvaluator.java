@@ -7,6 +7,7 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Created by Mugdha on 7/2/2017.
@@ -20,6 +21,9 @@ public class SubselectEvaluator implements Operator {
     String alias;
     PlainSelect plainSelect;
     HashMap<String, CreateTable> createTableMap;
+    HashSet<String> fromObjects;
+    HashSet<String> groupObject;
+    HashSet<String> orderObject;
 
     public SubselectEvaluator(PlainSelect plainSelect, HashMap createTableMap,
                               String alias, HashMap<String, Integer> databaseMap){
@@ -30,11 +34,23 @@ public class SubselectEvaluator implements Operator {
         outputTupleList = new ArrayList<>();
         schemaList = new ArrayList<>();
         tupleLocation = 0;
+        fromObjects = new HashSet<>();
+        groupObject = new HashSet<>();
+        orderObject = new HashSet<>();
     }
 
     public void execute(){
         SubMain subMain = new SubMain(plainSelect, createTableMap, databaseMap);
         outputTupleList = subMain.execute();
+        if(fromObjects != null){
+            fromObjects = subMain.fromObjects;
+        }
+        if(groupObject != null){
+            groupObject = subMain.groupObject;
+        }
+        if(orderObject != null){
+            orderObject = subMain.orderObject;
+        }
         Column[] tempSchema = subMain.newSchema;
         Table table = new Table("fromtable");
         table.setAlias(alias);

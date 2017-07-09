@@ -8,6 +8,7 @@ import net.sf.jsqlparser.statement.select.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -22,6 +23,9 @@ public class FromScanner implements FromItemVisitor {
     ArrayList<Column> schemaList;
     HashMap<String, Integer> databaseMap;
     public Operator source = null;
+    HashSet<String> fromObjects;
+    HashSet<String> groupObject;
+    HashSet<String> orderObject;
 
     public FromScanner(HashMap<String, CreateTable> createTableMap, HashMap<String, Integer> databaseMap) {
         this.createTableMap = createTableMap;
@@ -30,6 +34,9 @@ public class FromScanner implements FromItemVisitor {
         operatorMap = new HashMap<>();
         schemaList = new ArrayList<>();
         fileSizeMap = new HashMap<>();
+        fromObjects = new HashSet<>();
+        groupObject = new HashSet<>();
+        orderObject = new HashSet<>();
     }
     public void visit(SubJoin subjoin) {
 
@@ -43,7 +50,7 @@ public class FromScanner implements FromItemVisitor {
             aliasHasMap.put(alias,"fromtable");
         }
         else {
-            System.out.println("WARNING: FromScanner SubSelect: alias added as FT");
+            //System.out.println("WARNING: FromScanner SubSelect: alias added as FT");
             alias = "ft";
         }
         SelectBody selectBody = subSelect.getSelectBody();
@@ -63,7 +70,20 @@ public class FromScanner implements FromItemVisitor {
             this.createTableMap = subselectEvaluator.createTableMap;
             operatorMap.put("fromtable",subselectEvaluator);
             fileSizeMap.put("fromtable", (long)0);
-
+            HashSet<String> tempfromObjects = subselectEvaluator.fromObjects;
+            if(tempfromObjects != null){
+                for(String str : tempfromObjects){
+                    if(!fromObjects.contains(str)){
+                        fromObjects.add(str);
+                    }
+                }
+            }
+            if(groupObject != null){
+                groupObject = subselectEvaluator.groupObject;
+            }
+            if(orderObject != null){
+                orderObject = subselectEvaluator.orderObject;
+            }
         }
         else{
             System.out.println("ERROR: FromScanner : Union not handled in subSelect");
@@ -71,6 +91,10 @@ public class FromScanner implements FromItemVisitor {
     }
 
     public void visit(Table table) {
+
+        if(!fromObjects.contains(table.getWholeTableName())){
+            fromObjects.add(table.getWholeTableName());
+        }
         CreateTable ct = createTableMap.get(table.getName().toLowerCase());
         if(table.getAlias() != null) {
             aliasHasMap.put(table.getAlias().toLowerCase(), table.getName().toLowerCase());

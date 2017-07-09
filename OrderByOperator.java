@@ -17,16 +17,16 @@ import java.util.*;
 public class OrderByOperator {
 
     HashMap<PrimitiveValue,ArrayList<PrimitiveValue[]>> groupByMap;
-    HashMap<String, Integer> databaseMap;
-    HashMap<String, CreateTable> createTableMap;
     ArrayList<PrimitiveValue[]> outputTupleList; // output of group or having or selection operation
     ArrayList<PrimitiveValue[]> orderByOutput;
     HashMap<String, String> aliasHashMap;
+    HashMap<String, CreateTable> createTableMap;
+    HashMap<String, Integer> databaseMap;
     Column[] schema;
     PlainSelect plainSelect;
     String groupByColumnName;
     String orderByColumnName;
-    Boolean projectionFlag = false;
+    HashSet<String> orderObject;
 
     public OrderByOperator(
             HashMap<PrimitiveValue,ArrayList<PrimitiveValue[]>> groupByMap,
@@ -47,6 +47,7 @@ public class OrderByOperator {
         orderByOutput = new ArrayList<>();
         groupByColumnName = "";
         orderByColumnName = "";
+        orderObject = new HashSet<>();
     }
 
     public void orderTuples(List<OrderByElement> orderByList){
@@ -57,10 +58,12 @@ public class OrderByOperator {
         Expression orderByExp = orderByList.get(0).getExpression();
 
         if(orderByExp instanceof Column) {
-            projectionFlag = true;
             Column column = (Column)orderByExp;
             orderByColumnName = column.getColumnName().toLowerCase();
             if(column.getTable().getName() != null) {
+                if(!orderObject.contains(column.getWholeColumnName())){
+                    orderObject.add(column.getWholeColumnName());
+                }
                 aliasName = column.getTable().getName().toLowerCase();
                 if(aliasHashMap.containsKey(aliasName)){
                     tableName = aliasHashMap.get(aliasName);
@@ -79,6 +82,9 @@ public class OrderByOperator {
             } else {
                 for(int i = 0; i < schema.length; i++) {
                     if(schema[i].getColumnName().toLowerCase().equals(column.getColumnName().toLowerCase())) {
+                        if(!orderObject.contains(column.getWholeColumnName())){
+                            orderObject.add(column.getWholeColumnName());
+                        }
                         columnIndexOrder = i;
                         break;
                     }
@@ -86,99 +92,81 @@ public class OrderByOperator {
 
             }
         }
-        else if(orderByExp instanceof StringValue){
-            String orderExpName = ((StringValue) orderByExp).getNotExcapedValue();
-            String projectionAliasName = "";
-            ArrayList<SelectItem> selectItems = (ArrayList<SelectItem>) plainSelect.getSelectItems();
-            for(SelectItem selectItem : selectItems) {
-                if (selectItem instanceof SelectExpressionItem) {
-                    Expression expression = ((SelectExpressionItem) selectItem).getExpression();
-                    if (expression instanceof Function) {
-                        Function function = (Function) expression;
-                        if(((SelectExpressionItem) selectItem).getAlias()!=null){
-                            projectionAliasName = ((SelectExpressionItem) selectItem).getAlias();
-                        }
-                        if(orderExpName.equals(projectionAliasName)){
-                            // order evaluatior class returns final arraylist and group by map
-                            OrderEvaluator orderEvaluator = new OrderEvaluator(function, groupByMap, aliasHashMap,
-                                    schema, outputTupleList, isAsc);
-                            orderByList = orderEvaluator.execute();
-                        }
-                    }
-                }
-            }
-        }
+
         else{
             System.out.println("ERROR in OrderByOperator: Expression not handled");
         }
 
-        if(projectionFlag){
-            Set keySet = groupByMap.keySet();
-            Iterator itr = keySet.iterator();
-            if(plainSelect.getGroupByColumnReferences()==null){
-                OrderComparator orderComparator = new OrderComparator(aliasHashMap, outputTupleList.get(0),
-                        columnIndexOrder, schema, isAsc, createTableMap, databaseMap
-                );
-                Collections.sort(outputTupleList,orderComparator);
-            }
 
-            if(plainSelect.getGroupByColumnReferences()!=null){
-                groupByColumnName = plainSelect.getGroupByColumnReferences().get(0).getColumnName().toLowerCase();
-                if(groupByColumnName.equals(orderByColumnName)){
-                    while(itr.hasNext()){
-                        PrimitiveValue key = (PrimitiveValue) itr.next();
-                        ArrayList<PrimitiveValue[]> arrayList = groupByMap.get(key);
-                        orderByOutput.add(arrayList.get(0));
-                        ArrayList<PrimitiveValue[]> tempList = new ArrayList<>();
-                        tempList.add(arrayList.get(0));
-                        groupByMap.put(key,tempList);
-                    }
-                    OrderComparator orderComparator = new OrderComparator(aliasHashMap, orderByOutput.get(0),
-                            columnIndexOrder, schema, isAsc, createTableMap, databaseMap
-                    );
-                    Collections.sort(orderByOutput,orderComparator);
+        Set keySet = groupByMap.keySet();
+        Iterator itr = keySet.iterator();
+        if(plainSelect.getGroupByColumnReferences()==null){
+            OrderComparator orderComparator = new OrderComparator(
+                    aliasHashMap, outputTupleList.get(0), columnIndexOrder, schema, isAsc,
+                    createTableMap, databaseMap
+            );
+            Collections.sort(outputTupleList,orderComparator);
+        }
+
+        if(plainSelect.getGroupByColumnReferences()!=null){
+            groupByColumnName = plainSelect.getGroupByColumnReferences().get(0).getColumnName().toLowerCase();
+            if(groupByColumnName.equals(orderByColumnName)){
+                while(itr.hasNext()){
+                    PrimitiveValue key = (PrimitiveValue) itr.next();
+                    ArrayList<PrimitiveValue[]> arrayList = groupByMap.get(key);
+                    orderByOutput.add(arrayList.get(0));
+                    ArrayList<PrimitiveValue[]> tempList = new ArrayList<>();
+                    tempList.add(arrayList.get(0));
+                    groupByMap.put(key,tempList);
                 }
-                else{
-                    while (itr.hasNext()){
-                        PrimitiveValue key = (PrimitiveValue) itr.next();
-                        ArrayList<PrimitiveValue[]> arrayList = groupByMap.get(key);
-                        OrderComparator orderComparator = new OrderComparator(aliasHashMap, arrayList.get(0),
-                                columnIndexOrder, schema, isAsc, createTableMap, databaseMap
-                        );
-                        Collections.sort(arrayList,orderComparator);
-                        groupByMap.replace(key,arrayList);
-                    }
+                OrderComparator orderComparator = new OrderComparator(
+                        aliasHashMap, orderByOutput.get(0), columnIndexOrder, schema, isAsc,
+                        createTableMap, databaseMap
+                );
+                Collections.sort(orderByOutput,orderComparator);
+            }
+            else{
+                while (itr.hasNext()){
+                    PrimitiveValue key = (PrimitiveValue) itr.next();
+                    ArrayList<PrimitiveValue[]> arrayList = groupByMap.get(key);
+                    OrderComparator orderComparator = new OrderComparator(
+                            aliasHashMap, arrayList.get(0), columnIndexOrder, schema, isAsc,
+                            createTableMap, databaseMap
+                    );
+                    Collections.sort(arrayList,orderComparator);
+                    groupByMap.replace(key,arrayList);
                 }
             }
         }
+
     }
 
     public ArrayList getOrderByOutput(){
-        if(projectionFlag){
-            if(plainSelect.getGroupByColumnReferences()==null){
-                return outputTupleList;
+
+        if(plainSelect.getGroupByColumnReferences()==null){
+            return outputTupleList;
+        }
+        else if(plainSelect.getGroupByColumnReferences()!=null){
+            if(groupByColumnName.equals(orderByColumnName)){
+                return orderByOutput;
             }
-            else if(plainSelect.getGroupByColumnReferences()!=null){
-                if(groupByColumnName.equals(orderByColumnName)){
-                    return orderByOutput;
-                }
-                else{
-                    Set keySet = groupByMap.keySet();
-                    Iterator itr = keySet.iterator();
-                    while (itr.hasNext()) {
-                        PrimitiveValue key = (PrimitiveValue) itr.next();
-                        ArrayList arraylist = groupByMap.get(key);
-                        for(int i =0; i< arraylist.size(); i++){
-                            PrimitiveValue[] tuple = (PrimitiveValue[]) arraylist.get(0);
-                            orderByOutput.add(tuple);
-                        }
+            else{
+                Set keySet = groupByMap.keySet();
+                Iterator itr = keySet.iterator();
+                while (itr.hasNext()) {
+                    PrimitiveValue key = (PrimitiveValue) itr.next();
+                    ArrayList arraylist = groupByMap.get(key);
+                    //CHECK all tuples should be outputted
+                    for(int i =0; i< arraylist.size(); i++){
+                        PrimitiveValue[] tuple = (PrimitiveValue[]) arraylist.get(i);
+                        orderByOutput.add(tuple);
                     }
-                    return orderByOutput;
                 }
+                return orderByOutput;
             }
         }
 
-        return orderByOutput;
+        return outputTupleList;
     }
 
 

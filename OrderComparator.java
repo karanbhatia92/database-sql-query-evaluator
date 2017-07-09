@@ -13,33 +13,30 @@ import java.util.HashMap;
  */
 public class OrderComparator implements Comparator<PrimitiveValue[]> {
     HashMap<String, String> aliasHashMap = new HashMap<>();
-    HashMap<String, Integer> databaseMap;
     HashMap<String, CreateTable> createTableMap;
+    HashMap<String, Integer> databaseMap;
     PrimitiveValue[] tuple;
     Integer columnIndex;
     Column[] schema;
     Boolean isAsc;
 
-    public OrderComparator(
-            HashMap<String, String> aliasHashMap,
-            PrimitiveValue[] tuple,
-            Integer columnIndex,
-            Column[] schema,
-            Boolean isAsc,
-            HashMap<String, CreateTable> createTableMap,
-            HashMap<String, Integer> databaseMap
+    public OrderComparator( HashMap<String, String> aliasHashMap, PrimitiveValue[] tuple,
+            Integer columnIndex, Column[] schema, Boolean isAsc, HashMap<String, CreateTable> createTableMap,
+                            HashMap<String, Integer> databaseMap
     ){
         this.aliasHashMap = aliasHashMap;
         this.tuple = tuple;
         this.columnIndex = columnIndex;
         this.schema = schema;
         this.isAsc = isAsc;
+        this.createTableMap = createTableMap;
+        this.databaseMap = databaseMap;
     }
 
     @Override
     public int compare(PrimitiveValue[] pv1, PrimitiveValue[] pv2) {
         Evaluator eval = new Evaluator();
-        eval.setVariables(tuple, schema, aliasHashMap, createTableMap, databaseMap);
+        eval.setVariables(tuple,schema,aliasHashMap, createTableMap, databaseMap);
 
         if(isAsc){
             GreaterThan cmp = new GreaterThan();
